@@ -1,0 +1,12 @@
+
+************
+-sigma           = 10
+-PSNR_basic      = 36.2744
+-RMSE_basic      = 3.91578
+-PSNR            = 36.6306
+-RMSE            = 3.75845
+
+-PSNR_basic_bias = 37.8509
+-RMSE_basic_bias = 3.26583
+-PSNR_bias       = 38.2374
+-RMSE_bias       = 3.12372
