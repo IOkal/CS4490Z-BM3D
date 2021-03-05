@@ -381,9 +381,6 @@ void bm3d_1st_step(
     vector<vector<unsigned> > patch_table;
     precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
-    vector<vector<unsigned> > hog_patch_table;
-    precompute_HOG_BM(hog_patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
-
     // cout << "patch_table.size() = " << patch_table.size() << endl;
     // cout << "patch table i 0-16 and j 0-16 of each" << endl;
     // for ( std::vector<std::vector<unsigned> >::size_type i = 17000; i<17100; i++ )
@@ -1250,77 +1247,24 @@ void precompute_BM(
     // Histogram for intensity
     // Assuming images are already in grayscale
     // unsigned char histogramArray[height*width];
+
     int patchNum = 0;
 
-    vector<vector<unsigned> > patch_intensity_hist(height*width,vector<unsigned> (255,0));
-
-    vector<float> double_img = img;
-
-    cout << "Width = " << width << endl;
-
-    cout << "Saving image as received: " << endl;
-    save_image("received.png", double_img, width, height, 1);
-
-    // Histogram of Gradients:
-    cout << "Calculating histogram of gradients: " << endl;
-    for (int i=0; i<double_img.size()-1-(2*width+2); i++){
-        int i1 = i+width;
-        int i2 = i+(width*2);
-
-        int Gx = (2*img[i2+1]+img[i2]+img[i2+2]) - (2*img[i+1]+img[i]+img[i+2]);
-        int Gy = (2*img[i1+2]+img[i+2]+img[i2+2]) - (2*img[i1]+img[i]+img[i2]);
-
-        double_img[i] = sqrt(Gx*Gx + Gy*Gy);
-    }
-    cout << "Now saving image: "<< endl;
-    save_image("Test.png", double_img, 544, 544, 1);
-
+    unsigned char patch_intensity_hist[height*width][255] = {0};
 
     // for(int wi=0; wi<=width; wi++){
     //     for(int hj = 0; hj<=height; hj++){
             //...
             //! 1st patch, top left corner
-    int i = 0;
-    // cout << "width = " << width << endl;
-    // cout << "width = " << height << endl; 
-    // cout << "(height-kHW-1)*width = " << (height-kHW-1)*width << endl; 
-
-    for (; i < (height-kHW-1)*width; ){
-        //i < width*height - (kHW-1)*width;
-        for (unsigned p = 0; p < kHW; p++, patchNum++) //Up to patch size (one dimension) //COLS
+    for (int i = 0; i < width*height - nHW; patchNum++){
+        for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
         {
-            if(i%width == 0 && i != 0){
-                i+=(kHW-1)*(width); 
-            }
-            for (unsigned q = 0; q < kHW; q++) {
-                patch_intensity_hist[patchNum][(int) img[q*width+i]]++;
+            for (unsigned q = 0; q < kHW; q++) 
+                patch_intensity_hist[patchNum][(int) img[i++]]++;
                 // value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
-                // cout << "patch_intensity_hist["<< patchNum << "][(int) img[" << q << "*" << width << "+" << i <<"]]++" << patch_intensity_hist[patchNum][(int) img[q*width+i]] << endl;
-                // cout << "img[" << q << "*" << width << "+" << i <<"]]++" << (int) img[q*width+i] << endl;
-            }
-                
-            i++;
         }
     }
-    // cout << "patchNum = " << patchNum << endl;
-    // cout << "i = " << i << endl;
-    // cout << "patch_int...[1079] = ";
-    // for(i=0; i<256; i++){
-    //     cout << i << ": " <<patch_intensity_hist[1079][i] << endl;
-    // }
-
-    // Histogram is a vector
-    // move up in increments of angle
-    // using gradient we get the angles
-    // In the end, we'll have x-axis as the angles and y-axis as gradients
-    // Values of the index of the vector should be angles
-
-    // Gradient is 
-    // The point
-
-    // atan2(dy, dx) gives the ANGLE
-    // Need to make error handling, so that negative angles are dealt with
-    // or angles over 360
+    cout << "patchNum = " << patchNum << endl;
 
     //! For each possible distance, precompute inter-patches distance
     for (unsigned di = 0; di <= nHW; di++)          //For hlf the search window
@@ -1332,9 +1276,6 @@ void precompute_BM(
             // Patches are size = 8x8
             // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             // XXXXXXXXXXXXXXXX!XXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
             // ...
             // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX 33rd row, then 66th then ...
 
@@ -1353,6 +1294,9 @@ void precompute_BM(
                     // diff{x+16} = img{x} - img[x+16]
                     // Difference of pixel that SIXTEEN AHEAD equals value at current MINUS pixel SIXTEEN Ahead (whole squared)
                     diff_table[k] = (img[k + dk] - img[k]) * (img[k + dk] - img[k]);   
+
+                    //
+
                     // Value of angle that is 16 ahead. Is equal to current y minus 16 ahead y. Divided by Current x minus 16 ahead x.
                     // angle_diff_table[k] = atan(img[k+dk])
 
@@ -1361,7 +1305,6 @@ void precompute_BM(
                     // cout << "diff_table[" << k << "] = " << diff_table[k] << endl;
                 }
             }
-
 
             //! Compute the sum for each patches, using the method of the integral images
             const unsigned dn = nHW * width + nHW; //16*width+16; start at 0,16 and up to _,512; aka 16 ahead in both height and width
@@ -1374,7 +1317,6 @@ void precompute_BM(
                 for (unsigned q = 0; q < kHW; q++, pq++) 
                     value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
             }
-
             sum_table[ddk][dn] = value;
             // top_left_angle_table[]
 
@@ -1412,6 +1354,7 @@ void precompute_BM(
                         - diff_table[pq - kHW * width]
                         + diff_table[pq - kHW - kHW * width];
                 }
+
             }
         }
 
@@ -1455,8 +1398,6 @@ void precompute_BM(
                         table_distance.push_back(make_pair(
                                     sum_table[dj + nHW + di * Ns][k_r],
                                     k_r + di * width + dj));
-
-                        
                         // table_angle.push_back(make_pair(
                         //             sum_table[dj + nHW + di * Ns][k_r],
                         //             0));
@@ -1495,334 +1436,6 @@ void precompute_BM(
 				patch_table[k_r].push_back(table_distance[0].second);
         }
     }
-}
-
-/**
- * @brief Precompute Bloc Matching (distance inter-patches)
- *
- * @param patch_table: for each patch in the image, will contain
- * all coordonnate of its similar patches
- * @param img: noisy image on which the distance is computed
- * @param width, height: size of img
- * @param kHW: size of patch (kHW x kHW)
- * @param NHW: maximum similar patches wanted
- * @param nHW: size of the boundary of img
- * @param tauMatch: threshold used to determinate similarity between
- *        patches
- *
- * @return none.
- **/
-void precompute_HOG_BM(
-    vector<vector<unsigned> > &patch_table
-,   const vector<float> &img
-,   const unsigned width
-,   const unsigned height
-,   const unsigned kHW
-,   const unsigned NHW
-,   const unsigned nHW
-,   const unsigned pHW
-,   const float    tauMatch
-){
-    //! Declarations
-    const unsigned Ns = 2 * nHW + 1;
-    const float threshold = tauMatch * kHW * kHW;
-    vector<float> diff_table(width * height);
-    // vector<vector<float> > sum_table((nHW + 1) * Ns, vector<float> (width * height, 2 * threshold));
-    // if (patch_table.size() != width * height)
-    //     patch_table.resize(width * height);
-    // vector<unsigned> row_ind;
-    // ind_initialize(row_ind, height - kHW + 1, nHW, pHW);
-    // vector<unsigned> column_ind;
-    // ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
-
-    // cout << "Saving image as received: " << endl;
-    // save_image("received.png", magnitudes, width, height, 1);
-    // vector<unsigned> Gx;
-    // vector<unsigned> Gy;
-
-    // Histogram of Gradients:[
-    // for (int i=0; i<magnitudes.size()-1-(2*width+2); i++){
-    int img2d[height][width];
-    // vector<vector<int>> img2d;
-
-    for (int i=0; i<height; i++){
-        for (int j=0; j<width; j++) {
-        img2d[i][j] = img[i*width+j];
-        }
-    }
-    int img2dhororg[height][width];
-    int img2dverorg[height][width];
-    // vector<vector<float>> img2dmag(height, vector<float> (width, 0));
-    int img2dmag[height][width];
-    float img2dang[height][width];
-
-    vector<float> Gx = img;
-    vector<float> Gy = img;
-    vector<float> magnitudes = img;
-    vector<float> angles = img;
-
-    ///horizontal
-    int max=-200, min=2000;
-
-    // TODO: CHANGE TO 0 i=0 ...
-    // Why <-255 becauyse of equation makes -512 min
-    //black = max neg
-    // white = max pos
-    // grey = 0 (or mid)
-
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-            int curr=img2d[i-1][j-1]+2*img2d[i-1][j]+img2d[i-1][j+1]-img2d[i+1][j-1]-2*img2d[i+1][j]-img2d[i+1][j+1];
-            img2dhororg[i][j] = curr;
-            Gx[i*width+j] = curr;
-            if (curr>max) max = curr;
-            if (curr<min) min = curr;
-        }
-    }
-    // cout << "max = " << max << endl << "min = " << min << endl;
-
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-        Gx[i*width+j] += 512;
-        }
-    }
-
-    //Image dependant scaling
-    // Should be image independant. 
-    // instead of abs(min) should add 512 instead of abs(min)
-    float ratio = (512+512)/255.0;
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++){
-        Gx[i*width+j] /= ratio;
-        }
-    }
-
-
-    // for (int i=0; i<height; i++) {
-    //     for (int j=0; j<width; j++) {
-    //     Gx[i*width+j]=img2dhororg[i][j];
-    //     }
-    // }
-
-    cout << "Now saving Gx image: "<< endl;
-    save_image("Gx.png", Gx, height, width, 1);
-    cout << "Done saving" << endl;
-
-    ///vertical:
-    max=-200; min=2000;
-
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-            int curr=img2d[i-1][j-1]+2*img2d[i][j-1]+img2d[i+1][j-1]-img2d[i-1][j+1]-2*img2d[i][j+1]-img2d[i+1][j+1];
-            img2dverorg[i][j] = curr;
-            Gy[i*width+j] = curr;
-            if (curr>max) max = curr;
-            if (curr<min) min = curr;
-        }
-    }
-
-    // cout << "max = " << max << endl << "min = " << min << endl;
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-        Gy[i*width+j] += abs(min);
-        }
-    }
-
-    ratio = (max+abs(min))/255.0;
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++){
-        Gy[i*width+j] /= ratio;
-        }
-    }
-
-
-    // for (int i=0; i<height; i++) {
-    //     for (int j=0; j<width; j++) {
-    //     Gy[i*width+j]=img2dverorg[i][j];
-    //     }
-    // }
-
-    cout << "Now saving Gy image: "<< endl;
-    save_image("Gy.png", Gy, height, width, 1);
-    cout << "Done saving" << endl;
-
-    ///magnitude - we know range is 0-255 so max and min should be numbers inside range
-    max=-200; min=2000;
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++) {
-            img2dmag[i][j] = sqrt(pow(img2dhororg[i][j], 2)+pow(img2dverorg[i][j], 2));
-            if (img2dmag[i][j]>max) max = img2dmag[i][j];
-            if (img2dmag[i][j]<min) min = img2dmag[i][j];
-        }
-    }
-
-    // max=-200; min=2000;
-    //angles
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++) {
-            if (img2dhororg[i][j] !=0 ){
-                float thisAngle = atanf(img2dverorg[i][j]/img2dhororg[i][j]);
-                thisAngle = (thisAngle*180/PI)+90;
-                // img2dang[i][j] = (atanf(img2dverorg[i][j]/90) * 180 / PI)+90;
-                img2dang[i][j] = thisAngle;
-            } else {
-                img2dang[i][j] = 90;
-            }
-            // img2dang[i][j] = (atanf(img2dverorg[i][j]/img2dhororg[i][j]) * 180 / PI)+90;
-            // img2dang[i][j] = (atanf(img2dverorg[i][j]/img2dhororg[i][j]) * 180 / PI)+90; //sqrt(pow(img2dhororg[i][j], 2)+pow(img2dverorg[i][j], 2));
-            // if (img2dang[i][j]>max) max = img2dang[i][j];
-            // if (img2dang[i][j]<min) min = img2dang[i][j];
-        }
-    }
-
-    // max will be root(2*512^2) and min will be 0 as per calculation (512^2 * 2)
-    int diff = max - min;
-
-    // cout << "Max = " << max << endl;
-    // cout << "Min = " << min << endl;
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++){
-            float abc = (img2dmag[i][j]-min)/(diff*1.0);
-            img2dmag[i][j] = abc* 255;
-        }
-    } 
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++) {
-            magnitudes[i*width+j]=img2dmag[i][j];
-        }
-    }
-
-    for (int i=0; i<height; i++) {
-        for (int j=0; j<width; j++) {
-            angles[i*width+j]=img2dang[i][j];
-        }
-    }
-
-    cout << "Now saving magnitues image: "<< endl;
-    save_image("mags.png", magnitudes, height, width, 1);
-    cout << "Done saving" << endl;
-
-
-    cout << "Now saving angles image: "<< endl;
-    save_image("angs.png", angles, height, width, 1);
-    cout << "Done saving" << endl;
-
-    // for (int i=0; i<magnitudes.size()-1-(2*width+2); i++){
-    //     int i1 = i+width;
-    //     int i2 = i+(width*2);
-
-    //     int Gx = (2*img[i2+1]+img[i2]+img[i2+2]) - (2*img[i+1]+img[i]+img[i+2]);
-    //     int Gy = (2*img[i1+2]+img[i+2]+img[i2+2]) - (2*img[i1]+img[i]+img[i2]);
-
-    //     magnitudes[i] = sqrtf(Gx*Gx + Gy*Gy);
-    //     angles[i] = (atanf(Gy/Gx) * 180 / PI)+90;
-    //     // angles[i] = atanf(Gy/Gx) * 180 / PI;
-
-    // }
-    // cout << "Now saving image: "<< endl;
-    // save_image("Test.png", magnitudes, 544, 544, 1);
-
-    // cout << "Now saving image: "<< endl;
-    // save_image("Angles.png", angles, 544, 544, 1);
-
-    int patchNum = 0;
-
-    // cout << "Size()-1 = " << magnitudes.size() << endl;
-    // cout << "height*width= " << height*width << endl;
-
-    vector<vector<float> > patch_histogram(height*width, vector<float> (9,0));
-    cout << "patch_histogram.size() = " << patch_histogram.size() << endl;
-
-/*
-    1 2 3 4 5 6 7
-    x x x x x x x
-    x       x   x
-                x
-
-    1 2 3 4 5 6 7       
-    x x x x x x x
-    x x       x  
-    x            
-
-    1 2 3 4 5 6 7       
-    x x x x x x x
-    x       x   x
-    x       x   x                        
-*/
-
-
-
-    for (int i=0; i < height*width - (width+1)*(kHW+1); patchNum++ ){
-        //i < width*height - (kHW-1)*width;
-        for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
-        {
-            for (unsigned q = 0; q < kHW; q++) {
-                int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-                patch_histogram[patchNum][floor(angles[x]/20)]++;
-                
-                // int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-                // float mag = magnitudes[x];
-                // float ang = angles[x];
-                // // patch_table[patchNum].clear();
-                // // cout << "mag = " << magnitudes[x] << "ang = " << angles[x] << endl;                               
-                // //patch_table[p][0 = 0; 1 = 20; 2 = 40; 3 = 60; 4 = 80; 5 = 100; 6 = 120; 7 = 140; 8 = 160;]
-                // if(ang<=20){
-                //     patch_histogram[patchNum][0] += (1-(ang/20))*mag;
-                //     patch_histogram[patchNum][1] += (ang/20)*mag;
-                // } else if(ang<=40){
-                //     patch_histogram[patchNum][1] += (1-(ang/40))*mag;
-                //     patch_histogram[patchNum][2] += (ang/40)*mag;
-                // } else if(ang<=60){
-                //     patch_histogram[patchNum][2] += (1-(ang/60))*mag;
-                //     patch_histogram[patchNum][3] += (ang/60)*mag;
-                // } else if(ang<=80){
-                //     patch_histogram[patchNum][3] += (1-(ang/80))*mag;
-                //     patch_histogram[patchNum][4] += (ang/80)*mag;
-                // } else if(ang<=100){
-                //     patch_histogram[patchNum][4] += (1-(ang/100))*mag;
-                //     patch_histogram[patchNum][5] += (ang/100)*mag;
-                // } else if(ang<=120){
-                //     patch_histogram[patchNum][5] += (1-(ang/120))*mag;
-                //     patch_histogram[patchNum][6] += (ang/120)*mag;
-                // } else if(ang<=140){
-                //     patch_histogram[patchNum][6] += (1-(ang/140))*mag;
-                //     patch_histogram[patchNum][7] += (ang/140)*mag;
-                // } else if(ang<=160){
-                //     patch_histogram[patchNum][7] += (1-(ang/160))*mag;
-                //     patch_histogram[patchNum][8] += (ang/160)*mag;
-                // } else {
-                //     patch_histogram[patchNum][8] += (ang/180)*mag;
-                //     patch_histogram[patchNum][0] += (1-(ang/180))*mag;
-                // }
-
-                // patch_table[patchNum][]
-                
-                // patch_table[patchNum][(int) img[q*width+p]]++;
-                // value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
-                // cout << "patch_intensity_hist["<< patchNum << "][(int) img[" << q << "*" << width << "+" << i <<"]]++" << patch_intensity_hist[patchNum][(int) img[q*width+i]] << endl;
-                // cout << "img[" << q << "*" << width << "+" << i <<"]]++" << (int) img[q*width+i] << endl;
-            }
-        }
-        i+=5;
-        if((i%width)>=(width-kHW)){
-            i += ((width - (i%width)) + (4*width));
-        }
-    }
-
-    // cout << "PatchNum = " << patchNum << endl;
-
-    cout << "Printing first 10 patches" << endl;
-    for(int x = 0; x < 10; x++){
-        for (int y = 0; y<9; y++){
-            cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
-        }
-    }
-    // printHistogram(patch_histogram, 10);
 }
 
 /**

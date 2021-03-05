@@ -186,4 +186,16 @@ void precompute_BM(
 ,   const float    tauMatch
 );
 
+void precompute_HOG_BM(
+    std::vector<std::vector<unsigned> > &patch_table
+,   const std::vector<float> &img
+,   const unsigned width
+,   const unsigned height
+,   const unsigned kHW
+,   const unsigned NHW
+,   const unsigned n
+,   const unsigned pHW
+,   const float    tauMatch
+);
+
 #endif // BM3D_H_INCLUDED
