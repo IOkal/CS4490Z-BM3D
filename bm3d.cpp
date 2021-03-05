@@ -1376,7 +1376,7 @@ void precompute_HOG_BM(
     // Converting from 1D image to 2D (not efficient, but makes for cleaner and easier code)
     for (int i=0; i<height; i++){
         for (int j=0; j<width; j++) {
-        img2d[i][j] = img[i*width+j];
+            img2d[i][j] = img[i*width+j];
         }
     }
 
@@ -1408,8 +1408,8 @@ void precompute_HOG_BM(
 
     // Scaling image:
     // Step 1. Add 512 (minimum possible amount)
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
+    for (int i=0; i<height; i++){
+        for (int j=0; j<width; j++) {
             Gx[i*width+j] += 512;
         }
     }
@@ -1524,28 +1524,65 @@ void precompute_HOG_BM(
 
     // 2D Vector with 9 bins each representing a range of angles 20 degrees wide
     vector<vector<float> > patch_histogram(height*width, vector<float> (9,0));
+    // vector<vector<float> > patch_histogram2(height*width, vector<float> (9,0));
 
-    for (int i=0; i < height*width - (width+1)*(kHW+1); patchNum++ ){
-        //i < width*height - (kHW-1)*width;
-        for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
-        {
-            for (unsigned q = 0; q < kHW; q++) {
-                int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-                patch_histogram[patchNum][floor(angles[x]/20)]++;
+    // for (int i=0; i < height*width - (width+1)*(kHW+1); patchNum++ ){
+    //     //i < width*height - (kHW-1)*width;
+    //     for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
+    //     {
+    //         for (unsigned q = 0; q < kHW; q++) {
+    //             int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
+    //             patch_histogram[patchNum][floor(angles[x]/20)]++;
+    //         }
+    //     }
+    //     i+=5;
+    //     if((i%width)>=(width-kHW)){
+    //         i += ((width - (i%width)) + (4*width));
+    //     }
+    // }
+    // patchNum =0;
+
+    // Looping from nHW on i and j so that we only start from real image, not the boundary
+    for (int i=nHW; i<height-nHW-kHW+1; ){
+        for (int j=nHW; j<width-nHW-kHW+1;patchNum++){
+            for (unsigned p=0; p<kHW; p++){
+                for(unsigned q=0; q<kHW; q++){
+                    int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
+                    patch_histogram[patchNum][floor(ang2d[i+p][j+q]/20)]++;
+                }
             }
+            j+=5;
         }
         i+=5;
-        if((i%width)>=(width-kHW)){
-            i += ((width - (i%width)) + (4*width));
-        }
     }
+
+    // Creating a vector of size patchNum that holds the max amount of similar patches (NHW)
+    vector<vector<unsigned> > patchSimilarity(patchNum, vector<unsigned> (NHW, 0)); 
+
+
+
+    // Sorting patches based on similarity:
+    // for(int i=0; i<patchNum; i++){
+    //     for(int j=0; j<patchNum; j++){
+    //         if(i==j) break; // We dont want to compare the same patch with itself
+    //         for(int k=0; j<9; k++){
+
+    //         }
+    //     }
+    // }
 
     // cout << "PatchNum = " << patchNum << endl;
 
-    // cout << "Printing first 10 patches" << endl;
-    // for(int x = 0; x < 10; x++){
+    cout << "Printing first 5 patches" << endl;
+    for(int x = 0; x < 5; x++){
+        for (int y = 0; y<9; y++){
+            cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
+        }
+    }
+    // cout << "Printing second 5 patches" << endl;
+    // for(int x = 0; x < 5; x++){
     //     for (int y = 0; y<9; y++){
-    //         cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
+    //         cout << "patch_histogram2[" << x << "][" << y << "] = " << patch_histogram2[x][y] << endl;
     //     }
     // }
 }
@@ -1592,9 +1629,3 @@ void sd_weighting(
         weight_table[c] = (res > 0.0f ? 1.0f / sqrtf(res) : 0.0f);
     }
 }
-
-
-
-
-
-
