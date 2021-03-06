@@ -387,8 +387,8 @@ void bm3d_1st_step(
     vector<vector<unsigned> > patch_table;
     precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
-    vector<vector<unsigned> > hog_patch_table;
-    precompute_HOG_BM(hog_patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    vector<vector<unsigned> > patch2_table;
+    precompute_HOG_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     //! table_2D[p * N + q + (i * width + j) * kHard_2 + c * (2 * nHard + 1) * width * kHard_2]
     vector<float> table_2D((2 * nHard + 1) * width * chnls * kHard_2, 0.0f);
@@ -409,29 +409,36 @@ void bm3d_1st_step(
 
         wx_r_table.clear();
         group_3D_table.clear();
- 
+
         //! Loop on j_r
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
+            // cout << ind_j << endl;
             //! Initialization
             const unsigned j_r = column_ind[ind_j];
             const unsigned k_r = i_r * width + j_r;
-
+            // cout << "here1?" << endl;
             //! Number of similar patches
             const unsigned nSx_r = patch_table[k_r].size();
-
             // printf("Number of patches was: %ui", nSx_r);
+            // cout << "here2?" << endl;
 
             //! Build of the 3D group
             vector<float> group_3D(chnls * nSx_r * kHard_2, 0.0f);
             for (unsigned c = 0; c < chnls; c++)
                 for (unsigned n = 0; n < nSx_r; n++)
                 {
+                    // cout << "here3?" << endl;
+                    // cout << "nHard = " << nHard << endl << "i_r = " << i_r << endl << "patch_table[" << k_r << "][" << n << "] = " << patch_table[k_r][n] << endl;
                     const unsigned ind = patch_table[k_r][n] + (nHard - i_r) * width;
+                    // cout << "ind = " << ind << endl;
+                    // cout << "here4?" << endl;
                     for (unsigned k = 0; k < kHard_2; k++)
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
+                    // cout << "here5?" << endl;
                 }
+            // cout << "j_r mid" << endl;
 
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
@@ -454,6 +461,7 @@ void bm3d_1st_step(
                 wx_r_table.push_back(weight_table[c]);
 
         } //! End of loop on j_r
+        // cout << "j_r end" << endl;
 
         //!  Apply 2D inverse transform
         if (tau_2D == DCT)
@@ -1285,7 +1293,8 @@ void precompute_BM(
 
             }
         }
-
+    int stupid = 0;
+    cout << "First set in their func:" << endl;
     //! Precompute Bloc Matching
     vector<pair<float, unsigned> > table_distance;
     //! To avoid reallocation
@@ -1334,9 +1343,12 @@ void precompute_BM(
                                             table_distance.end(), ComparaisonFirst);
 
             //! Keep a maximum of NHW similar patches
-            for (unsigned n = 0; n < nSx_r; n++)
+            for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-
+                if(stupid < 10)
+                    cout << patch_table[k_r][n] << endl;
+                stupid++;
+            }
 			//! To avoid problem
 			if (nSx_r == 1)
 				patch_table[k_r].push_back(table_distance[0].second);
@@ -1481,8 +1493,8 @@ void precompute_HOG_BM(
     // Angle for each pixel
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
-            if (horizontalDiff[i][j] !=0 ){
-                float thisAngle = atanf(verticalDiff[i][j]/horizontalDiff[i][j]);
+            if (verticalDiff[i][j] !=0 ){
+                float thisAngle = atanf(horizontalDiff[i][j]/verticalDiff[i][j]);
                 thisAngle = (thisAngle*180/PI)+90;
                 ang2d[i][j] = thisAngle;
             } else {
@@ -1522,9 +1534,9 @@ void precompute_HOG_BM(
     cout << "Done saving" << endl;
 
     cout << "Now saving angles image: "<< endl;
-    save_image("angs.png", angles, height, width, 1);
+    save_image("angs2.png", angles, height, width, 1);
     cout << "Done saving" << endl;
-
+/*
     //! Row and Column Indexes are used to keep track of the patches that are within the actual image.
     //! They are pre-configured to the patch size, allowing us to loop over them without having to worry about patch sizes 
     vector<unsigned> row_ind;
@@ -1559,6 +1571,20 @@ void precompute_HOG_BM(
         }
     }
 
+    unsigned fake = 0;
+    cout << "Difference between first 2 patches: " << endl;
+    for(int k=0; k<9; k++)
+        fake+= pow(patch_histogram[8720][k]-patch_histogram[8723][k], 2);
+    cout << fake << endl;
+
+    fake = 0;
+    cout << "Difference between first patche and next row: " << endl;
+    for(int k=0; k<9; k++)
+        fake+= pow(patch_histogram[8720][k]-patch_histogram[9264][k], 2);
+    cout << fake << endl;
+
+    int stupid = 0;
+    cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
@@ -1573,14 +1599,39 @@ void precompute_HOG_BM(
             
             unsigned diff = 0;
 
-            for(unsigned ind_l = 0; ind_l< row_ind.size(); ind_l++){
-                for (unsigned ind_m = 0; ind_m < column_ind.size(); ind_m++){
+            for(unsigned ind_l = 0; ind_l<=ind_i; ind_l++){
+                for(unsigned ind_m=0; ind_m<=ind_j; ind_m++){
                     const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
                     for(int k=0; k<9; k++)
                         diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
                     table_distance.push_back(make_pair(diff, n_r));
+                    diff = 0;
                 }
             }
+
+            for(unsigned ind_l=ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+                for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW && ind_m<row_ind.size(); ind_m++){
+                    const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
+                    for(int k=0; k<9; k++)
+                        diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+                    table_distance.push_back(make_pair(diff, n_r));
+                    diff = 0;
+                }
+            }
+
+            // for(unsigned ind_l = 0; ind_l< row_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_l++){
+            //     for (unsigned ind_m = 0; ind_m < column_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_m++){
+            //         // if(ind_l == ind_i && ind_j == ind_m) {
+            //         //     continue;
+            //         // } else {
+            //             const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++)
+            //                 diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         // }
+            //     }
+            // }
 
             //! We need a power of 2 for the number of similar patches,
             //! because of the Welsh-Hadamard transform on the third dimension.
@@ -1593,8 +1644,12 @@ void precompute_HOG_BM(
                                             table_distance.end(), ComparaisonFirst);
 
             //! Keep a maximum of NHW similar patches
-            for (unsigned n = 0; n < nSx_r; n++)
+            for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
+                if (stupid<10)
+                    cout << patch_table[k_r][n] << endl;
+                stupid++;
+            }
         }
     }
 
@@ -1686,21 +1741,23 @@ void precompute_HOG_BM(
 
     // cout << "PatchNum = " << patchNum << endl;
 
-    // cout << "Printing first 5 patches" << endl;
-    // for(int x = 0; x < 5; x++){
-    //     for (int y = 0; y<9; y++){
-    //         cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
-    //     }
-    // }
+    cout << "Printing first 5 patches" << endl;
+    for(int x = 0; x < 5; x++){
+        for (int y = 0; y<9; y++){
+            cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
+        }
+    }
     // cout << "Printing second 5 patches" << endl;
     // for(int x = 0; x < 5; x++){
     //     for (int y = 0; y<9; y++){
     //         cout << "patch_histogram2[" << x << "][" << y << "] = " << patch_histogram2[x][y] << endl;
     //     }
     // }
+
+    */
 }
 
-/**
+/** 
  * @brief Process of a weight dependent on the standard
  *        deviation, used during the weighted aggregation.
  *
