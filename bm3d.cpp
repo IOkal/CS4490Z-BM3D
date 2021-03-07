@@ -327,7 +327,7 @@ int run_bm3d(
  *
  * @return none.
  **/
-void bm3d_1st_step(
+void    bm3d_1st_step(
     const float sigma
 ,   vector<float> const& img_noisy
 ,   vector<float> &img_basic
@@ -432,7 +432,7 @@ void bm3d_1st_step(
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
                 }
-
+            cout << "ind_j = " << ind_j << endl;
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
             ht_filtering_hadamard(group_3D, hadamard_tmp, nSx_r, kHard, chnls, sigma_table,
