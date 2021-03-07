@@ -384,11 +384,11 @@ void bm3d_1st_step(
     vector<float> numerator  (width * height * chnls, 0.0f);
 
     //! Precompute Bloc-Matching
-    vector<vector<unsigned> > patch_table;
-    precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    // vector<vector<unsigned> > patch_table;
+    // precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
-    vector<vector<unsigned> > hog_patch_table;
-    precompute_HOG_BM(hog_patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    vector<vector<unsigned> > patch_table;
+    precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     //! table_2D[p * N + q + (i * width + j) * kHard_2 + c * (2 * nHard + 1) * width * kHard_2]
     vector<float> table_2D((2 * nHard + 1) * width * chnls * kHard_2, 0.0f);
@@ -1379,16 +1379,6 @@ void precompute_HOG_BM(
     if (patch_table.size() != width * height)
         patch_table.resize(width * height);
 
-    // Histogram of Gradients:[
-    int img2d[height][width];
-
-    // Converting from 1D image to 2D (not efficient, but makes for cleaner and easier code)
-    for (int i=0; i<height; i++){
-        for (int j=0; j<width; j++) {
-            img2d[i][j] = img[i*width+j];
-        }
-    }
-
     // 2D Arrays used to calculate Gx, Gy, Magnitude and Angles
     int horizontalDiff[height][width]; // 2D Horizontal Image differences (Gy)
     int verticalDiff[height][width]; // 2D Vertical Image differences (Gx)
@@ -1400,6 +1390,16 @@ void precompute_HOG_BM(
     vector<float> Gy = img;
     vector<float> magnitudes = img;
     vector<float> angles = img;
+
+    // Histogram of Gradients:[
+    int img2d[height][width];
+
+    // Converting from 1D image to 2D (not efficient, but makes for cleaner and easier code)
+    for (int i=0; i<height; i++){
+        for (int j=0; j<width; j++) {
+            img2d[i][j] = img[i*width+j];
+        }
+    }
 
     /// Horizontal
     int max=-200, min=2000;
@@ -1561,7 +1561,10 @@ void precompute_HOG_BM(
         }
     }
 
-        int stupid = 0;
+    int stupid = 0;
+    int ascii = 0;
+
+    int x = 0;
     cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
@@ -1574,13 +1577,19 @@ void precompute_HOG_BM(
             // patch_table[k_r].clear();
             // cout << "HERE" << endl;
             
+            // 28,000. ~750,000,000
+            // nHW = search window = 16. Full search = 32 in each direction
+            // (32x32)x(32x32) = 1024x1024 = ~1000000
+
             unsigned diff = 0;
             if(ind_i > nHW && ind_j > nHW){
                 for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
                     for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
                         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++)
-                            diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+                        for(int k=0; k<9; k++){
+                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                            diff += (x*x);
+                        }
                         table_distance.push_back(make_pair(diff, n_r));
                         diff = 0;
                     }
@@ -1589,8 +1598,10 @@ void precompute_HOG_BM(
                 for(unsigned ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
                     for(unsigned ind_m=0; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
                         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++)
-                            diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+                        for(int k=0; k<9; k++){
+                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                            diff += (x*x);
+                        }
                         table_distance.push_back(make_pair(diff, n_r));
                         diff = 0;
                     }
@@ -1599,8 +1610,10 @@ void precompute_HOG_BM(
                 for(unsigned ind_l = 0; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
                     for(unsigned ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
                         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++)
-                            diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+                        for(int k=0; k<9; k++){
+                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                            diff += (x*x);
+                        }
                         table_distance.push_back(make_pair(diff, n_r));
                         diff = 0;
                     }
@@ -1609,14 +1622,16 @@ void precompute_HOG_BM(
                 for(unsigned ind_l = 0; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
                     for(unsigned ind_m=0; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
                         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++)
-                            diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+                        for(int k=0; k<9; k++){
+                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                            diff += (x*x);
+                        }
                         table_distance.push_back(make_pair(diff, n_r));
                         diff = 0;
                     }
                 }
             }
-            cout << "Here" << endl;
+
             // for(unsigned ind_l = 0; ind_l<=ind_i; ind_l++){
             //     for(unsigned ind_m=0; ind_m<=ind_j; ind_m++){
             //         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
@@ -1656,7 +1671,7 @@ void precompute_HOG_BM(
             //! Sort patches according to their distance to the reference one
             partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
                                             table_distance.end(), ComparaisonFirst);
-            //! Keep a maximum of NHW similar patches
+            //! Keep a maximum of similar patches
             for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
                 if (stupid<10)
