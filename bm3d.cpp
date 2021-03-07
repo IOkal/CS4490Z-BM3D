@@ -1652,7 +1652,7 @@ void precompute_HOG_BM(
             //! because of the Welsh-Hadamard transform on the third dimension.
             //! We assume that NHW is already a power of 2
             const unsigned nSx_r = (NHW > table_distance.size() ?
-                        nHW            closest_power_of_2(table_distance.size()) : NHW);
+                                    closest_power_of_2(table_distance.size()) : NHW);
             //! Sort patches according to their distance to the reference one
             partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
                                             table_distance.end(), ComparaisonFirst);
@@ -1663,7 +1663,7 @@ void precompute_HOG_BM(
                     cout << patch_table[k_r][n] << endl;
                 stupid++;
             }
-        }nHW
+        }
     }
 
     // for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
