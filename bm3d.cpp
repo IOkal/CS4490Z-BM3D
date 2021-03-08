@@ -427,11 +427,14 @@ void    bm3d_1st_step(
             for (unsigned c = 0; c < chnls; c++)
                 for (unsigned n = 0; n < nSx_r; n++)
                 {
+                    if(ind_j == 0)
+                        cout << "nHard = " << nHard << endl << "i_r = " << i_r << endl << "patch_table[" << k_r << "][" << n << "] = " << patch_table[k_r][n] << endl;
                     const unsigned ind = patch_table[k_r][n] + (nHard - i_r) * width;
                     for (unsigned k = 0; k < kHard_2; k++)
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
                 }
+            cout << "ind_i = " << ind_i << endl;
             cout << "ind_j = " << ind_j << endl;
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
@@ -571,7 +574,7 @@ void bm3d_2nd_step(
 
     //! Precompute Bloc-Matching
     vector<vector<unsigned> > patch_table;
-    precompute_BM(patch_table, img_basic, width, height, kWien, NWien, nWien, pWien, tauMatch);
+    precompute_HOG_BM(patch_table, img_basic, width, height, kWien, NWien, nWien, pWien, tauMatch);
 
     //! Preprocessing of Bior table
     vector<float> lpd, hpd, lpr, hpr;
@@ -1569,12 +1572,12 @@ void precompute_HOG_BM(
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
-        unsigned diff = 0;
+        int diff = 0;
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
             //! Initialization
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
-            // table_distance.clear();
+            table_distance.clear();
             // patch_table[k_r].clear();
             // cout << "HERE" << endl;
             
@@ -1583,55 +1586,86 @@ void precompute_HOG_BM(
             // (32x32)x(32x32) = 1024x1024 = ~1000000
 
             diff = 0;
-            if(ind_i > nHW && ind_j > nHW){
-                for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-                    for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-                        const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++){
-                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                            diff += (x*x);
-                        }
-                        table_distance.push_back(make_pair(diff, n_r));
-                        diff = 0;
+            unsigned n_r = 0;
+
+            for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
+            {
+                for (int di = 0; di <= (int) nHW; di++){
+                    n_r = k_r + dj + nHW + di * Ns;
+                    for(int k=0; k<9; k++){
+                        x = (patch_histogram[n_r][k]-patch_histogram[n_r][k]);
+                        diff += (x*x);
                     }
+                    table_distance.push_back(make_pair(diff, n_r));
+                    diff = 0;
                 }
-            } else if(ind_i >= nHW){
-                for(unsigned ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-                    for(unsigned ind_m=0; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-                        const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++){
-                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                            diff += (x*x);
-                        }
-                        table_distance.push_back(make_pair(diff, n_r));
-                        diff = 0;
+
+                for (int di = - (int) nHW; di < 0; di++){
+                    n_r = k_r + -dj + nHW + (-di) * Ns;
+                    for(int k=0; k<9; k++){
+                        x = (patch_histogram[n_r][k]-patch_histogram[n_r][k]);
+                        diff += (x*x);
                     }
-                }
-            } else if(ind_j >= nHW){
-                for(unsigned ind_l = 0; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-                    for(unsigned ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-                        const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++){
-                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                            diff += (x*x);
-                        }
-                        table_distance.push_back(make_pair(diff, n_r));
-                        diff = 0;
-                    }
-                }
-            } else {
-                for(unsigned ind_l = 0; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-                    for(unsigned ind_m=0; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-                        const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-                        for(int k=0; k<9; k++){
-                            x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                            diff += (x*x);
-                        }
-                        table_distance.push_back(make_pair(diff, n_r));
-                        diff = 0;
-                    }
+                    table_distance.push_back(make_pair(diff, k_r + di * width + dj));
+                    diff = 0;
                 }
             }
+
+            // if(ind_i > nHW && ind_j > nHW){
+            //     for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else if(ind_i > nHW){
+            //     for(unsigned ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else if(ind_j > nHW){
+            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else {
+            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW+1 && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // }
 
             // for(unsigned ind_l = 0; ind_l<=ind_i; ind_l++){
             //     for(unsigned ind_m=0; ind_m<=ind_j; ind_m++){
