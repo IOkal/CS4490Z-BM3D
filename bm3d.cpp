@@ -384,8 +384,8 @@ void    bm3d_1st_step(
     vector<float> numerator  (width * height * chnls, 0.0f);
 
     //! Precompute Bloc-Matching
-    // vector<vector<unsigned> > patch_table;
-    // precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    // vector<vector<unsigned> > patch2_table;
+    // precompute_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     vector<vector<unsigned> > patch_table;
     precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
@@ -427,15 +427,15 @@ void    bm3d_1st_step(
             for (unsigned c = 0; c < chnls; c++)
                 for (unsigned n = 0; n < nSx_r; n++)
                 {
-                    if(ind_j == 0)
-                        cout << "nHard = " << nHard << endl << "i_r = " << i_r << endl << "patch_table[" << k_r << "][" << n << "] = " << patch_table[k_r][n] << endl;
+                    // if(ind_j == 0)
+                    //     cout << "nHard = " << nHard << endl << "i_r = " << i_r << endl << "patch_table[" << k_r << "][" << n << "] = " << patch_table[k_r][n] << endl;
                     const unsigned ind = patch_table[k_r][n] + (nHard - i_r) * width;
                     for (unsigned k = 0; k < kHard_2; k++)
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
                 }
-            cout << "ind_i = " << ind_i << endl;
-            cout << "ind_j = " << ind_j << endl;
+            // cout << "ind_i = " << ind_i << endl;
+            // cout << "ind_j = " << ind_j << endl;
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
             ht_filtering_hadamard(group_3D, hadamard_tmp, nSx_r, kHard, chnls, sigma_table,
@@ -1290,7 +1290,10 @@ void precompute_BM(
 
             }
         }
-
+    int stupid = 0;
+    
+    cout << "first set of patches in their func:" << endl;
+        
     //! Precompute Bloc Matching
     vector<pair<float, unsigned> > table_distance;
     //! To avoid reallocation
@@ -1339,9 +1342,12 @@ void precompute_BM(
                                             table_distance.end(), ComparaisonFirst);
 
             //! Keep a maximum of NHW similar patches
-            for (unsigned n = 0; n < nSx_r; n++)
+            for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-
+                if (stupid<10)
+                    cout << patch_table[k_r][n] << endl;
+                stupid++;
+            }
 			//! To avoid problem
 			if (nSx_r == 1)
 				patch_table[k_r].push_back(table_distance[0].second);
@@ -1593,7 +1599,7 @@ void precompute_HOG_BM(
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + dj + nHW + di * Ns;
                     for(int k=0; k<9; k++){
-                        x = (patch_histogram[n_r][k]-patch_histogram[n_r][k]);
+                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
                     table_distance.push_back(make_pair(diff, n_r));
@@ -1601,12 +1607,12 @@ void precompute_HOG_BM(
                 }
 
                 for (int di = - (int) nHW; di < 0; di++){
-                    n_r = k_r + -dj + nHW + (-di) * Ns;
+                    n_r = k_r + (-dj) + nHW + (-di) * Ns;
                     for(int k=0; k<9; k++){
-                        x = (patch_histogram[n_r][k]-patch_histogram[n_r][k]);
+                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
-                    table_distance.push_back(make_pair(diff, k_r + di * width + dj));
+                    table_distance.push_back(make_pair(diff, n_r + di * width + dj));
                     diff = 0;
                 }
             }
