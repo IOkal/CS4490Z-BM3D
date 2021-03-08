@@ -361,8 +361,11 @@ void    bm3d_1st_step(
     ind_initialize(column_ind, width - kHard + 1, nHard, pHard);
     const unsigned kHard_2 = kHard * kHard;
     vector<float> group_3D_table(chnls * kHard_2 * NHard * column_ind.size());
+    vector<float> group_3D_table2(chnls * kHard_2 * NHard * column_ind.size());
     vector<float> wx_r_table;
+    vector<float> wx_r_table2;
     wx_r_table.reserve(chnls * column_ind.size());
+    wx_r_table2.reserve(chnls * column_ind.size());
     vector<float> hadamard_tmp(NHard);
 
     //! Check allocation memory
@@ -382,10 +385,12 @@ void    bm3d_1st_step(
     //! For aggregation part
     vector<float> denominator(width * height * chnls, 0.0f);
     vector<float> numerator  (width * height * chnls, 0.0f);
+    vector<float> denominator2(width * height * chnls, 0.0f);
+    vector<float> numerator2  (width * height * chnls, 0.0f);
 
     //! Precompute Bloc-Matching
-    // vector<vector<unsigned> > patch2_table;
-    // precompute_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    vector<vector<unsigned> > patch2_table;
+    precompute_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     vector<vector<unsigned> > patch_table;
     precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
@@ -408,7 +413,9 @@ void    bm3d_1st_step(
                         kHard, i_r, pHard, row_ind[0], row_ind.back(), lpd, hpd);
 
         wx_r_table.clear();
+        wx_r_table2.clear();
         group_3D_table.clear();
+        group_3D_table2.clear();
  
         //! Loop on j_r
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
@@ -419,12 +426,13 @@ void    bm3d_1st_step(
 
             //! Number of similar patches
             const unsigned nSx_r = patch_table[k_r].size();
-
+            const unsigned nSx_r2 = patch2_table[k_r].size();
             // printf("Number of patches was: %ui", nSx_r);
 
             //! Build of the 3D group
             vector<float> group_3D(chnls * nSx_r * kHard_2, 0.0f);
-            for (unsigned c = 0; c < chnls; c++)
+            vector<float> group2_3D(chnls * nSx_r2 * kHard_2, 0.0f);
+            for (unsigned c = 0; c < chnls; c++){
                 for (unsigned n = 0; n < nSx_r; n++)
                 {
                     // if(ind_j == 0)
@@ -434,36 +442,60 @@ void    bm3d_1st_step(
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
                 }
+                for (unsigned n=0; n < nSx_r2; n++){
+                    const unsigned ind = patch2_table[k_r][n] + (nHard - i_r) * width;
+                    for (unsigned k = 0; k < kHard_2; k++)
+                        group2_3D[n + k * nSx_r2 + c * kHard_2 * nSx_r2] =
+                            table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
+                }
+            }
             // cout << "ind_i = " << ind_i << endl;
             // cout << "ind_j = " << ind_j << endl;
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
             ht_filtering_hadamard(group_3D, hadamard_tmp, nSx_r, kHard, chnls, sigma_table,
                                                     lambdaHard3D, weight_table, !useSD);
-
+            vector<float> weight_table2(chnls);
+            ht_filtering_hadamard(group2_3D, hadamard_tmp, nSx_r2, kHard, chnls, sigma_table,
+                                                    lambdaHard3D, weight_table2, !useSD);
+            
             //! 3D weighting using Standard Deviation
             if (useSD)
+            {
                 sd_weighting(group_3D, nSx_r, kHard, chnls, weight_table);
-
+                sd_weighting(group2_3D, nSx_r2, kHard, chnls, weight_table2);
+            }
             //! Save the 3D group. The DCT 2D inverse will be done after.
-            for (unsigned c = 0; c < chnls; c++)
+            for (unsigned c = 0; c < chnls; c++){
                 for (unsigned n = 0; n < nSx_r; n++)
                     for (unsigned k = 0; k < kHard_2; k++)
                         group_3D_table.push_back(group_3D[n + k * nSx_r +
                                                                     c * kHard_2 * nSx_r]);
+                for (unsigned n = 0; n < nSx_r2; n++){
+                    for(unsigned k = 0; k < kHard_2; k++)
+                        group_3D_table2.push_back(group2_3D[n + k * nSx_r2 +
+                                                                    c * kHard_2 * nSx_r2]);
+                }
+            }
 
             //! Save weighting
-            for (unsigned c = 0; c < chnls; c++)
+            for (unsigned c = 0; c < chnls; c++){
                 wx_r_table.push_back(weight_table[c]);
-
+                wx_r_table2.push_back(weight_table2[c]);
+            }
         } //! End of loop on j_r
 
         //!  Apply 2D inverse transform
-        if (tau_2D == DCT)
+        if (tau_2D == DCT){
             dct_2d_inverse(group_3D_table, kHard, NHard * chnls * column_ind.size(),
                            coef_norm_inv, plan_2d_inv);
-        else if (tau_2D == BIOR)
+            dct_2d_inverse(group_3D_table2, kHard, NHard * chnls * column_ind.size(),
+                           coef_norm_inv, plan_2d_inv);
+        }
+        else if (tau_2D == BIOR){
             bior_2d_inverse(group_3D_table, kHard, lpr, hpr);
+            bior_2d_inverse(group_3D_table2 kHard, lpr, hpr);
+        }
 
         //! Registration of the weighted estimation
         unsigned dec = 0;
@@ -472,6 +504,7 @@ void    bm3d_1st_step(
             const unsigned j_r   = column_ind[ind_j];
             const unsigned k_r   = i_r * width + j_r;
             const unsigned nSx_r = patch_table[k_r].size();
+            const unsigned nSx_r2 = patch2_table[k_r].size();
             for (unsigned c = 0; c < chnls; c++)
             {
                 for (unsigned n = 0; n < nSx_r; n++)
@@ -489,8 +522,24 @@ void    bm3d_1st_step(
                                             * wx_r_table[c + ind_j * chnls];
                         }
                 }
+                for (unsigned n = 0; n < nSx_r; n++)
+                {
+                    const unsigned k = patch2_table[k_r][n] + c * width * height;
+                    for (unsigned p = 0; p < kHard; p++)
+                        for (unsigned q = 0; q < kHard; q++)
+                        {
+                            const unsigned ind = k + p * width + q;
+                            numerator2[ind] += kaiser_window[p * kHard + q]
+                                            * wx_r_table2[c + ind_j * chnls]
+                                            * group_3D_table2[p * kHard + q + n * kHard_2
+                                                  + c * kHard_2 * nSx_r2 + dec];
+                            denominator2[ind] += kaiser_window[p * kHard + q]
+                                            * wx_r_table2[c + ind_j * chnls];
+                        }
+                }
             }
             dec += nSx_r * chnls * kHard_2;
+            dec += nSx_r2 * chnls * kHard_2;
         }
 
     } //! End of loop on i_r
@@ -498,6 +547,9 @@ void    bm3d_1st_step(
     //! Final reconstruction
     for (unsigned k = 0; k < width * height * chnls; k++)
         img_basic[k] = numerator[k] / denominator[k];
+    for (unsigned k=0; k<width*height*chnls; k++){
+        img_basic2[k] = numerator2[k] / denominator2[k];
+    }
 }
 
 /**
