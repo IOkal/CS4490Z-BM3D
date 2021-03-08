@@ -1363,7 +1363,7 @@ void precompute_BM(
  **/
 void precompute_HOG_BM(
     vector<vector<unsigned> > &patch_table
-,   const vector<float> &img
+,   const vector<float> &img 
 ,   const unsigned width
 ,   const unsigned height
 ,   const unsigned kHW
@@ -1562,13 +1562,14 @@ void precompute_HOG_BM(
     }
 
     int stupid = 0;
-    int ascii = 0;
 
     int x = 0;
+    
     cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
+        unsigned diff = 0;
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
             //! Initialization
@@ -1581,7 +1582,7 @@ void precompute_HOG_BM(
             // nHW = search window = 16. Full search = 32 in each direction
             // (32x32)x(32x32) = 1024x1024 = ~1000000
 
-            unsigned diff = 0;
+            diff = 0;
             if(ind_i > nHW && ind_j > nHW){
                 for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
                     for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
