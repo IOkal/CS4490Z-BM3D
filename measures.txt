@@ -1,12 +1,12 @@
 
 ************
--sigma           = 10
--PSNR_basic      = 5.16528
--RMSE_basic      = 140.694
--PSNR            = 5.16528
--RMSE            = 140.694
+-sigma           = 0
+-PSNR_basic      = 135.377
+-RMSE_basic      = 4.34196e-05
+-PSNR            = -nan
+-RMSE            = -nan
 
--PSNR_basic_bias = 5.16528
--RMSE_basic_bias = 140.694
--PSNR_bias       = 5.16528
--RMSE_bias       = 140.694
+-PSNR_basic_bias = 135.377
+-RMSE_basic_bias = 4.34196e-05
+-PSNR_bias       = -nan
+-RMSE_bias       = -nan

@@ -21,6 +21,7 @@
 #include <iostream>
 #include <algorithm>
 #include <math.h>
+#include <map>
 
 #include "bm3d.h"
 #include "utilities.h"
@@ -35,6 +36,7 @@
 #define DCT       4
 #define BIOR      5
 #define HADAMARD  6
+#define PI        3.14159265
 
 #ifdef _OPENMP
     #include <omp.h>
@@ -45,6 +47,10 @@
  bool ComparaisonFirst(pair<float,unsigned> pair1, pair<float,unsigned> pair2)
 {
 	return pair1.first < pair2.first;
+}
+
+bool sortFunction(pair<int, int> pair1, pair<int, int> pair2){
+    return pair1.second < pair2.second;
 }
 
 /** ----------------- **/
@@ -138,7 +144,7 @@ int run_bm3d(
         const unsigned w_b = width  + 2 * nHard;
         vector<float> img_sym_noisy, img_sym_basic, img_sym_denoised;
         symetrize(img_noisy, img_sym_noisy, width, height, chnls, nHard);
-
+        
         //! Allocating Plan for FFTW process
         if (tau_2D_hard == DCT)
         {
@@ -158,144 +164,144 @@ int run_bm3d(
                       &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0]);
         cout << "done." << endl;
 
-    //     //! To avoid boundaries problem
-    //     for (unsigned c = 0; c < chnls; c++)
-    //     {
-    //         const unsigned dc_b = c * w_b * h_b + nHard * w_b + nHard;
-    //         unsigned dc = c * width * height;
-    //         for (unsigned i = 0; i < height; i++)
-    //             for (unsigned j = 0; j < width; j++, dc++)
-    //                 img_basic[dc] = img_sym_basic[dc_b + i * w_b + j];
-    //     }
-    //     symetrize(img_basic, img_sym_basic, width, height, chnls, nHard);
+        //! To avoid boundaries problem
+        for (unsigned c = 0; c < chnls; c++)
+        {
+            const unsigned dc_b = c * w_b * h_b + nHard * w_b + nHard;
+            unsigned dc = c * width * height;
+            for (unsigned i = 0; i < height; i++)
+                for (unsigned j = 0; j < width; j++, dc++)
+                    img_basic[dc] = img_sym_basic[dc_b + i * w_b + j];
+        }
+        symetrize(img_basic, img_sym_basic, width, height, chnls, nHard);
 
-    //     //! Allocating Plan for FFTW process
-    //     if (tau_2D_wien == DCT)
-    //     {
-    //         const unsigned nb_cols = ind_size(w_b - kWien + 1, nWien, pWien);
-    //         allocate_plan_2d(&plan_2d_for_1[0], kWien, FFTW_REDFT10,
-    //                                                     w_b * (2 * nWien + 1) * chnls);
-    //         allocate_plan_2d(&plan_2d_for_2[0], kWien, FFTW_REDFT10,
-    //                                                     w_b * pWien * chnls);
-    //         allocate_plan_2d(&plan_2d_inv  [0], kWien, FFTW_REDFT01,
-    //                                                     NWien * nb_cols * chnls);
-    //     }
+        //! Allocating Plan for FFTW process
+        if (tau_2D_wien == DCT)
+        {
+            const unsigned nb_cols = ind_size(w_b - kWien + 1, nWien, pWien);
+            allocate_plan_2d(&plan_2d_for_1[0], kWien, FFTW_REDFT10,
+                                                        w_b * (2 * nWien + 1) * chnls);
+            allocate_plan_2d(&plan_2d_for_2[0], kWien, FFTW_REDFT10,
+                                                        w_b * pWien * chnls);
+            allocate_plan_2d(&plan_2d_inv  [0], kWien, FFTW_REDFT01,
+                                                        NWien * nb_cols * chnls);
+        }
 
-    //     //! Denoising, 2nd Step
-    //     cout << "step 2...";
-    //     bm3d_2nd_step(sigma, img_sym_noisy, img_sym_basic, img_sym_denoised,
-    //             w_b, h_b, chnls, nWien, kWien, NWien, pWien, useSD_w, color_space,
-    //             tau_2D_wien, &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0]);
-    //     cout << "done." << endl;
+        //! Denoising, 2nd Step
+        cout << "step 2...";
+        bm3d_2nd_step(sigma, img_sym_noisy, img_sym_basic, img_sym_denoised,
+                w_b, h_b, chnls, nWien, kWien, NWien, pWien, useSD_w, color_space,
+                tau_2D_wien, &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0]);
+        cout << "done." << endl;
 
-    //     //! Obtention of img_denoised
-    //     for (unsigned c = 0; c < chnls; c++)
-    //     {
-    //         const unsigned dc_b = c * w_b * h_b + nWien * w_b + nWien;
-    //         unsigned dc = c * width * height;
-    //         for (unsigned i = 0; i < height; i++)
-    //             for (unsigned j = 0; j < width; j++, dc++)
-    //                 img_denoised[dc] = img_sym_denoised[dc_b + i * w_b + j];
-    //     }
-    // }
-    // //! If more than 1 threads are used
-    // else
-    // {
-    //     //! Cut the image in nb_threads parts
-    //     vector<vector<float> > sub_noisy(nb_threads);
-    //     vector<vector<float> > sub_basic(nb_threads);
-    //     vector<vector<float> > sub_denoised(nb_threads);
-    //     vector<unsigned> h_table(nb_threads);
-    //     vector<unsigned> w_table(nb_threads);
-    //     sub_divide(img_noisy, sub_noisy, w_table, h_table, width, height, chnls,
-    //                                                                     2 * nWien, true);
+        //! Obtention of img_denoised
+        for (unsigned c = 0; c < chnls; c++)
+        {
+            const unsigned dc_b = c * w_b * h_b + nWien * w_b + nWien;
+            unsigned dc = c * width * height;
+            for (unsigned i = 0; i < height; i++)
+                for (unsigned j = 0; j < width; j++, dc++)
+                    img_denoised[dc] = img_sym_denoised[dc_b + i * w_b + j];
+        }
+    }
+    //! If more than 1 threads are used
+    else
+    {
+        //! Cut the image in nb_threads parts
+        vector<vector<float> > sub_noisy(nb_threads);
+        vector<vector<float> > sub_basic(nb_threads);
+        vector<vector<float> > sub_denoised(nb_threads);
+        vector<unsigned> h_table(nb_threads);
+        vector<unsigned> w_table(nb_threads);
+        sub_divide(img_noisy, sub_noisy, w_table, h_table, width, height, chnls,
+                                                                        2 * nWien, true);
 
-    //     //! Allocating Plan for FFTW process
-    //     if (tau_2D_hard == DCT)
-    //         for (unsigned n = 0; n < nb_threads; n++)
-    //         {
-    //             const unsigned nb_cols = ind_size(w_table[n] - kHard + 1, nHard, pHard);
-    //             allocate_plan_2d(&plan_2d_for_1[n], kHard, FFTW_REDFT10,
-    //                                             w_table[n] * (2 * nHard + 1) * chnls);
-    //             allocate_plan_2d(&plan_2d_for_2[n], kHard, FFTW_REDFT10,
-    //                                             w_table[n] * pHard * chnls);
-    //             allocate_plan_2d(&plan_2d_inv  [n], kHard, FFTW_REDFT01,
-    //                                             NHard * nb_cols * chnls);
-    //         }
+        //! Allocating Plan for FFTW process
+        if (tau_2D_hard == DCT)
+            for (unsigned n = 0; n < nb_threads; n++)
+            {
+                const unsigned nb_cols = ind_size(w_table[n] - kHard + 1, nHard, pHard);
+                allocate_plan_2d(&plan_2d_for_1[n], kHard, FFTW_REDFT10,
+                                                w_table[n] * (2 * nHard + 1) * chnls);
+                allocate_plan_2d(&plan_2d_for_2[n], kHard, FFTW_REDFT10,
+                                                w_table[n] * pHard * chnls);
+                allocate_plan_2d(&plan_2d_inv  [n], kHard, FFTW_REDFT01,
+                                                NHard * nb_cols * chnls);
+            }
 
-    //     //! denoising : 1st Step
-    //     cout << "step 1...";
-    //     #pragma omp parallel shared(sub_noisy, sub_basic, w_table, h_table, \
-    //                                 plan_2d_for_1, plan_2d_for_2, plan_2d_inv)
-    //     {
-    //         #pragma omp for schedule(dynamic) nowait
-    //         for (unsigned n = 0; n < nb_threads; n++)
-    //         {
-    //             bm3d_1st_step(sigma, sub_noisy[n], sub_basic[n], w_table[n],
-    //                           h_table[n], chnls, nHard, kHard, NHard, pHard, useSD_h,
-    //                           color_space, tau_2D_hard, &plan_2d_for_1[n],
-    //                           &plan_2d_for_2[n], &plan_2d_inv[n]);
-    //         }
-    //     }
-    //     cout << "done." << endl;
+        //! denoising : 1st Step
+        cout << "step 1...";
+        #pragma omp parallel shared(sub_noisy, sub_basic, w_table, h_table, \
+                                    plan_2d_for_1, plan_2d_for_2, plan_2d_inv)
+        {
+            #pragma omp for schedule(dynamic) nowait
+            for (unsigned n = 0; n < nb_threads; n++)
+            {
+                bm3d_1st_step(sigma, sub_noisy[n], sub_basic[n], w_table[n],
+                              h_table[n], chnls, nHard, kHard, NHard, pHard, useSD_h,
+                              color_space, tau_2D_hard, &plan_2d_for_1[n],
+                              &plan_2d_for_2[n], &plan_2d_inv[n]);
+            }
+        }
+        cout << "done." << endl;
 
-    //     sub_divide(img_basic, sub_basic, w_table, h_table,
-    //                                             width, height, chnls, 2 * nHard, false);
+        sub_divide(img_basic, sub_basic, w_table, h_table,
+                                                width, height, chnls, 2 * nHard, false);
 
-    //     sub_divide(img_basic, sub_basic, w_table, h_table, width, height, chnls,
-    //                                                                     2 * nHard, true);
+        sub_divide(img_basic, sub_basic, w_table, h_table, width, height, chnls,
+                                                                        2 * nHard, true);
 
-    //     //! Allocating Plan for FFTW process
-    //     if (tau_2D_wien == DCT)
-    //         for (unsigned n = 0; n < nb_threads; n++)
-    //         {
-    //             const unsigned nb_cols = ind_size(w_table[n] - kWien + 1, nWien, pWien);
-    //             allocate_plan_2d(&plan_2d_for_1[n], kWien, FFTW_REDFT10,
-    //                                             w_table[n] * (2 * nWien + 1) * chnls);
-    //             allocate_plan_2d(&plan_2d_for_2[n], kWien, FFTW_REDFT10,
-    //                                             w_table[n] * pWien * chnls);
-    //             allocate_plan_2d(&plan_2d_inv  [n], kWien, FFTW_REDFT01,
-    //                                             NWien * nb_cols * chnls);
-    //         }
+        //! Allocating Plan for FFTW process
+        if (tau_2D_wien == DCT)
+            for (unsigned n = 0; n < nb_threads; n++)
+            {
+                const unsigned nb_cols = ind_size(w_table[n] - kWien + 1, nWien, pWien);
+                allocate_plan_2d(&plan_2d_for_1[n], kWien, FFTW_REDFT10,
+                                                w_table[n] * (2 * nWien + 1) * chnls);
+                allocate_plan_2d(&plan_2d_for_2[n], kWien, FFTW_REDFT10,
+                                                w_table[n] * pWien * chnls);
+                allocate_plan_2d(&plan_2d_inv  [n], kWien, FFTW_REDFT01,
+                                                NWien * nb_cols * chnls);
+            }
 
-    //     //! Denoising: 2nd Step
-    //     cout << "step 2...";
-    //     #pragma omp parallel shared(sub_noisy, sub_basic, sub_denoised,  w_table, \
-    //                                 h_table, plan_2d_for_1, plan_2d_for_2,  \
-    //                                 plan_2d_inv)
-    //     {
-    //         #pragma omp for schedule(dynamic) nowait
-    //         for (unsigned n = 0; n < nb_threads; n++)
-    //         {
-    //             bm3d_2nd_step(sigma, sub_noisy[n], sub_basic[n], sub_denoised[n],
-    //                           w_table[n], h_table[n], chnls, nWien, kWien, NWien, pWien,
-    //                           useSD_w, color_space, tau_2D_wien, &plan_2d_for_1[n],
-    //                           &plan_2d_for_2[n], &plan_2d_inv[n]);
-    //         }
-    //     }
-    //     cout << "done." << endl;
+        //! Denoising: 2nd Step
+        cout << "step 2...";
+        #pragma omp parallel shared(sub_noisy, sub_basic, sub_denoised,  w_table, \
+                                    h_table, plan_2d_for_1, plan_2d_for_2,  \
+                                    plan_2d_inv)
+        {
+            #pragma omp for schedule(dynamic) nowait
+            for (unsigned n = 0; n < nb_threads; n++)
+            {
+                bm3d_2nd_step(sigma, sub_noisy[n], sub_basic[n], sub_denoised[n],
+                              w_table[n], h_table[n], chnls, nWien, kWien, NWien, pWien,
+                              useSD_w, color_space, tau_2D_wien, &plan_2d_for_1[n],
+                              &plan_2d_for_2[n], &plan_2d_inv[n]);
+            }
+        }
+        cout << "done." << endl;
 
-    //     //! Reconstruction of the image
-    //     sub_divide(img_denoised, sub_denoised, w_table, h_table,
-    //                                             width, height, chnls, 2 * nWien, false);
+        //! Reconstruction of the image
+        sub_divide(img_denoised, sub_denoised, w_table, h_table,
+                                                width, height, chnls, 2 * nWien, false);
     }
 
     //! Inverse color space transform to RGB
-    // if (color_space_transform(img_denoised, color_space, width, height, chnls, false)
-    //     != EXIT_SUCCESS) return EXIT_FAILURE;
-    // if (color_space_transform(img_noisy, color_space, width, height, chnls, false)
-    //     != EXIT_SUCCESS) return EXIT_FAILURE;
-    // if (color_space_transform(img_basic, color_space, width, height, chnls, false)
-    //     != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (color_space_transform(img_denoised, color_space, width, height, chnls, false)
+        != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (color_space_transform(img_noisy, color_space, width, height, chnls, false)
+        != EXIT_SUCCESS) return EXIT_FAILURE;
+    if (color_space_transform(img_basic, color_space, width, height, chnls, false)
+        != EXIT_SUCCESS) return EXIT_FAILURE;
 
     //! Free Memory
-    // if (tau_2D_hard == DCT || tau_2D_wien == DCT)
-    //     for (unsigned n = 0; n < nb_threads; n++)
-    //     {
-    //         fftwf_destroy_plan(plan_2d_for_1[n]);
-    //         fftwf_destroy_plan(plan_2d_for_2[n]);
-    //         fftwf_destroy_plan(plan_2d_inv[n]);
-    //     }
+    if (tau_2D_hard == DCT || tau_2D_wien == DCT)
+        for (unsigned n = 0; n < nb_threads; n++)
+        {
+            fftwf_destroy_plan(plan_2d_for_1[n]);
+            fftwf_destroy_plan(plan_2d_for_2[n]);
+            fftwf_destroy_plan(plan_2d_inv[n]);
+        }
     fftwf_cleanup();
 
     return EXIT_SUCCESS;
@@ -321,7 +327,7 @@ int run_bm3d(
  *
  * @return none.
  **/
-void bm3d_1st_step(
+void    bm3d_1st_step(
     const float sigma
 ,   vector<float> const& img_noisy
 ,   vector<float> &img_basic
@@ -338,7 +344,7 @@ void bm3d_1st_step(
 ,   fftwf_plan *  plan_2d_for_1
 ,   fftwf_plan *  plan_2d_for_2
 ,   fftwf_plan *  plan_2d_inv
-){
+){  
     //! Estimatation of sigma on each channel
     vector<float> sigma_table(chnls);
     if (estimate_sigma(sigma, sigma_table, chnls, color_space) != EXIT_SUCCESS)
@@ -378,41 +384,11 @@ void bm3d_1st_step(
     vector<float> numerator  (width * height * chnls, 0.0f);
 
     //! Precompute Bloc-Matching
+    // vector<vector<unsigned> > patch2_table;
+    // precompute_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+
     vector<vector<unsigned> > patch_table;
-    precompute_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
-
-    vector<vector<unsigned> > hog_patch_table;
-    precompute_HOG_BM(hog_patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
-
-    // cout << "patch_table.size() = " << patch_table.size() << endl;
-    // cout << "patch table i 0-16 and j 0-16 of each" << endl;
-    // for ( std::vector<std::vector<unsigned> >::size_type i = 17000; i<17100; i++ )
-    // {
-    //     for ( std::vector<unsigned>::size_type j = 0; j < patch_table[i].size(); j++ )
-    //     {
-    //         if(patch_table[i][j] != NULL){
-    //             std::cout << "i: " << i << " j: " << j << " " << patch_table[i][j] << '  ';
-    //         }
-    //     }
-    //     std::cout << std::endl;
-    // }
-
-    // cout << "Printing patch_table vector after bloc matching" << endl;s
-    // for ( std::vector<std::vector<unsigned> >::size_type i = 0; i < patch_table.size(); i++ )
-    // {
-    //     for ( std::vector<unsigned>::size_type j = 0; j < patch_table[i].size(); j++ )
-    //     {
-    //         if(patch_table[i][j] != NULL){
-    //             std::cout << "i: " << i << " j: " << j << " " << patch_table[i][j] << ' ';
-    //         }
-    //     }
-    //     std::cout << std::endl;
-    // }
-
-    // cout << "i[0] j[0-16]:" << endl;
-    // for( vector<unsigned>::size_type j = 0; j<patch_table[0].size(); j++){
-    //     cout << patch_table[0][j] << endl;
-    // }
+    precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     //! table_2D[p * N + q + (i * width + j) * kHard_2 + c * (2 * nHard + 1) * width * kHard_2]
     vector<float> table_2D((2 * nHard + 1) * width * chnls * kHard_2, 0.0f);
@@ -451,12 +427,15 @@ void bm3d_1st_step(
             for (unsigned c = 0; c < chnls; c++)
                 for (unsigned n = 0; n < nSx_r; n++)
                 {
+                    // if(ind_j == 0)
+                    //     cout << "nHard = " << nHard << endl << "i_r = " << i_r << endl << "patch_table[" << k_r << "][" << n << "] = " << patch_table[k_r][n] << endl;
                     const unsigned ind = patch_table[k_r][n] + (nHard - i_r) * width;
                     for (unsigned k = 0; k < kHard_2; k++)
                         group_3D[n + k * nSx_r + c * kHard_2 * nSx_r] =
                             table_2D[k + ind * kHard_2 + c * kHard_2 * (2 * nHard + 1) * width];
                 }
-
+            // cout << "ind_i = " << ind_i << endl;
+            // cout << "ind_j = " << ind_j << endl;
             //! HT filtering of the 3D group
             vector<float> weight_table(chnls);
             ht_filtering_hadamard(group_3D, hadamard_tmp, nSx_r, kHard, chnls, sigma_table,
@@ -595,7 +574,7 @@ void bm3d_2nd_step(
 
     //! Precompute Bloc-Matching
     vector<vector<unsigned> > patch_table;
-    precompute_BM(patch_table, img_basic, width, height, kWien, NWien, nWien, pWien, tauMatch);
+    precompute_HOG_BM(patch_table, img_basic, width, height, kWien, NWien, nWien, pWien, tauMatch);
 
     //! Preprocessing of Bior table
     vector<float> lpd, hpd, lpr, hpr;
@@ -1214,8 +1193,8 @@ void preProcess(
  * all coordonnate of its similar patches
  * @param img: noisy image on which the distance is computed
  * @param width, height: size of img
- * @param kHW: size of patch == 8 in this example
- * @param NHW: maximum similar patches wanted 
+ * @param kHW: size of patch (kHW x kHW)
+ * @param NHW: maximum similar patches wanted
  * @param nHW: size of the boundary of img
  * @param tauMatch: threshold used to determinate similarity between
  *        patches
@@ -1224,7 +1203,6 @@ void preProcess(
  **/
 void precompute_BM(
     vector<vector<unsigned> > &patch_table
-// ,   vector<vector<unsigned> > &angle_patch_table
 ,   const vector<float> &img
 ,   const unsigned width
 ,   const unsigned height
@@ -1235,10 +1213,9 @@ void precompute_BM(
 ,   const float    tauMatch
 ){
     //! Declarations
-    const unsigned Ns = 2 * nHW + 1; //LENA: Ns=33 ; nHW = 16
+    const unsigned Ns = 2 * nHW + 1;
     const float threshold = tauMatch * kHW * kHW;
     vector<float> diff_table(width * height);
-    vector<float> angle_diff_table(width*height);
     vector<vector<float> > sum_table((nHW + 1) * Ns, vector<float> (width * height, 2 * threshold));
     if (patch_table.size() != width * height)
         patch_table.resize(width * height);
@@ -1247,139 +1224,37 @@ void precompute_BM(
     vector<unsigned> column_ind;
     ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
 
-    // Histogram for intensity
-    // Assuming images are already in grayscale
-    // unsigned char histogramArray[height*width];
-    int patchNum = 0;
-
-    vector<vector<unsigned> > patch_intensity_hist(height*width,vector<unsigned> (255,0));
-
-    vector<float> double_img = img;
-
-    cout << "Width = " << width << endl;
-
-    cout << "Saving image as received: " << endl;
-    save_image("received.png", double_img, width, height, 1);
-
-    // Histogram of Gradients:
-    cout << "Calculating histogram of gradients: " << endl;
-    for (int i=0; i<double_img.size()-1-(2*width+2); i++){
-        int i1 = i+width;
-        int i2 = i+(width*2);
-
-        int Gx = (2*img[i2+1]+img[i2]+img[i2+2]) - (2*img[i+1]+img[i]+img[i+2]);
-        int Gy = (2*img[i1+2]+img[i+2]+img[i2+2]) - (2*img[i1]+img[i]+img[i2]);
-
-        double_img[i] = sqrt(Gx*Gx + Gy*Gy);
-    }
-    cout << "Now saving image: "<< endl;
-    save_image("Test.png", double_img, 544, 544, 1);
-
-
-    // for(int wi=0; wi<=width; wi++){
-    //     for(int hj = 0; hj<=height; hj++){
-            //...
-            //! 1st patch, top left corner
-    int i = 0;
-    // cout << "width = " << width << endl;
-    // cout << "width = " << height << endl; 
-    // cout << "(height-kHW-1)*width = " << (height-kHW-1)*width << endl; 
-
-    for (; i < (height-kHW-1)*width; ){
-        //i < width*height - (kHW-1)*width;
-        for (unsigned p = 0; p < kHW; p++, patchNum++) //Up to patch size (one dimension) //COLS
-        {
-            if(i%width == 0 && i != 0){
-                i+=(kHW-1)*(width); 
-            }
-            for (unsigned q = 0; q < kHW; q++) {
-                patch_intensity_hist[patchNum][(int) img[q*width+i]]++;
-                // value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
-                // cout << "patch_intensity_hist["<< patchNum << "][(int) img[" << q << "*" << width << "+" << i <<"]]++" << patch_intensity_hist[patchNum][(int) img[q*width+i]] << endl;
-                // cout << "img[" << q << "*" << width << "+" << i <<"]]++" << (int) img[q*width+i] << endl;
-            }
-                
-            i++;
-        }
-    }
-    // cout << "patchNum = " << patchNum << endl;
-    // cout << "i = " << i << endl;
-    // cout << "patch_int...[1079] = ";
-    // for(i=0; i<256; i++){
-    //     cout << i << ": " <<patch_intensity_hist[1079][i] << endl;
-    // }
-
-    // Histogram is a vector
-    // move up in increments of angle
-    // using gradient we get the angles
-    // In the end, we'll have x-axis as the angles and y-axis as gradients
-    // Values of the index of the vector should be angles
-
-    // Gradient is 
-    // The point
-
-    // atan2(dy, dx) gives the ANGLE
-    // Need to make error handling, so that negative angles are dealt with
-    // or angles over 360
+    vector<float> fake = img;
 
     //! For each possible distance, precompute inter-patches distance
-    for (unsigned di = 0; di <= nHW; di++)          //For hlf the search window
-        for (unsigned dj = 0; dj < Ns; dj++)        //Up to full search window 
+    for (unsigned di = 0; di <= nHW; di++)
+        for (unsigned dj = 0; dj < Ns; dj++)
         {
-            const int dk = (int) (di * width + dj) - (int) nHW; //Current Pixel i guess - 16 to search behind
-            const unsigned ddk = di * Ns + dj; // Searching ahead by 16 col and 32 rows// starts at 0,0. 
-
-            // Patches are size = 8x8
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXX!XXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-            // ...
-            // XXXXXXXXXXXXXXXXXXXXXXXXXXXXX 33rd row, then 66th then ...
-
-            /*
-            *   The idea here is to group patches that are similar (by the threshold) according to their angle
-            *   THEN we sort according to their distance from reference image
-            */
+            const int dk = (int) (di * width + dj) - (int) nHW;
+            const unsigned ddk = di * Ns + dj;
 
             //! Process the image containing the square distance between pixels
-            for (unsigned i = nHW; i < height - nHW; i++) //For i = 16 up to 512-16 (LENA example)
+            for (unsigned i = nHW; i < height - nHW; i++)
             {
-                unsigned k = i * width + nHW; //Saying, on the row we're at + 16 (half search ahead)
-                for (unsigned j = nHW; j < width - nHW; j++, k++) //For j = 16 up to 512-16 (LENA example)
-                {
-                    // diff[x] = img[x-16] - img[x] 
-                    // diff{x+16} = img{x} - img[x+16]
-                    // Difference of pixel that SIXTEEN AHEAD equals value at current MINUS pixel SIXTEEN Ahead (whole squared)
-                    diff_table[k] = (img[k + dk] - img[k]) * (img[k + dk] - img[k]);   
-                    // Value of angle that is 16 ahead. Is equal to current y minus 16 ahead y. Divided by Current x minus 16 ahead x.
-                    // angle_diff_table[k] = atan(img[k+dk])
-
-                    // angle = atan(y2-y1/x2-x1) == atan(z2-z1) == math.tan-1()
-                    // cout << "dk = " << dk << " img[k+dk] = " << img[dk+k] << " img[" << k << "] = " << img[k] << endl;
-                    // cout << "diff_table[" << k << "] = " << diff_table[k] << endl;
-                }
+                unsigned k = i * width + nHW;
+                for (unsigned j = nHW; j < width - nHW; j++, k++)
+                    diff_table[k] = (img[k + dk] - img[k]) * (img[k + dk] - img[k]);
             }
-
 
             //! Compute the sum for each patches, using the method of the integral images
-            const unsigned dn = nHW * width + nHW; //16*width+16; start at 0,16 and up to _,512; aka 16 ahead in both height and width
-            
+            const unsigned dn = nHW * width + nHW;
             //! 1st patch, top left corner
             float value = 0.0f;
-            for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
+            for (unsigned p = 0; p < kHW; p++)
             {
-                unsigned pq = p * width + dn; //current row + 16 ahead in height + width // ROWS
-                for (unsigned q = 0; q < kHW; q++, pq++) 
-                    value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
+                unsigned pq = p * width + dn;
+                for (unsigned q = 0; q < kHW; q++, pq++)
+                    value += diff_table[pq];
             }
-
             sum_table[ddk][dn] = value;
-            // top_left_angle_table[]
 
             //! 1st row, top
-            for (unsigned j = nHW + 1; j < width - nHW; j++) //reason is we act start at -16, so we want to add 16 and we did first pixel so +1
+            for (unsigned j = nHW + 1; j < width - nHW; j++)
             {
                 const unsigned ind = nHW * width + j - 1;
                 float sum = sum_table[ddk][ind];
@@ -1412,26 +1287,17 @@ void precompute_BM(
                         - diff_table[pq - kHW * width]
                         + diff_table[pq - kHW - kHW * width];
                 }
+
             }
         }
-
-    // for ( std::vector<std::vector<float> >::size_type i = 0; i<sum_table.size(); i++ )
-    // {
-    //     for ( std::vector<unsigned>::size_type j = 0; j < sum_table[i].size(); j++ )
-    //     {
-    //         // if(sum_table[i][j] != NULL){
-    //         std::cout << "i: " << i << " j: " << j << " " << sum_table[i][j] << '\t';
-    //         // }
-    //     }
-    //     std::cout << std::endl;
-    // } 
-
+    int stupid = 0;
+    
+    cout << "first set of patches in their func:" << endl;
+        
     //! Precompute Bloc Matching
     vector<pair<float, unsigned> > table_distance;
-    vector<pair<float, unsigned> > table_angle;
     //! To avoid reallocation
     table_distance.reserve(Ns * Ns);
-    table_angle.reserve(Ns * Ns);
 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
@@ -1439,29 +1305,18 @@ void precompute_BM(
         {
             //! Initialization
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
-            // cout << "row_ind[" << ind_i << "] = " << row_ind[ind_i] << endl;
             table_distance.clear();
-            table_angle.clear();
             patch_table[k_r].clear();
-
-            // cout << "k_r = " << k_r << endl;
 
             //! Threshold distances in order to keep similar patches
             for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
             {
                 for (int di = 0; di <= (int) nHW; di++)
-                    if (sum_table[dj + nHW + di * Ns][k_r] < threshold){
-                        // cout << "sum_table[" << dj + nHW + di * Ns << "][" << k_r << "] = " << sum_table[dj + nHW + di * Ns][k_r] << endl;
+                    if (sum_table[dj + nHW + di * Ns][k_r] < threshold)
                         table_distance.push_back(make_pair(
-                                    sum_table[dj + nHW + di * Ns][k_r],
-                                    k_r + di * width + dj));
+                                    sum_table[dj + nHW + di * Ns][k_r]
+                                  , k_r + di * width + dj));
 
-                        
-                        // table_angle.push_back(make_pair(
-                        //             sum_table[dj + nHW + di * Ns][k_r],
-                        //             0));
-                    }
-                        
                 for (int di = - (int) nHW; di < 0; di++)
                     if (sum_table[-dj + nHW + (-di) * Ns][k_r] < threshold)
                         table_distance.push_back(make_pair(
@@ -1487,9 +1342,12 @@ void precompute_BM(
                                             table_distance.end(), ComparaisonFirst);
 
             //! Keep a maximum of NHW similar patches
-            for (unsigned n = 0; n < nSx_r; n++)
+            for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-
+                if (stupid<10)
+                    cout << patch_table[k_r][n] << endl;
+                stupid++;
+            }
 			//! To avoid problem
 			if (nSx_r == 1)
 				patch_table[k_r].push_back(table_distance[0].second);
@@ -1514,7 +1372,7 @@ void precompute_BM(
  **/
 void precompute_HOG_BM(
     vector<vector<unsigned> > &patch_table
-,   const vector<float> &img
+,   const vector<float> &img 
 ,   const unsigned width
 ,   const unsigned height
 ,   const unsigned kHW
@@ -1527,83 +1385,61 @@ void precompute_HOG_BM(
     const unsigned Ns = 2 * nHW + 1;
     const float threshold = tauMatch * kHW * kHW;
     vector<float> diff_table(width * height);
-    // vector<vector<float> > sum_table((nHW + 1) * Ns, vector<float> (width * height, 2 * threshold));
-    // if (patch_table.size() != width * height)
-    //     patch_table.resize(width * height);
-    // vector<unsigned> row_ind;
-    // ind_initialize(row_ind, height - kHW + 1, nHW, pHW);
-    // vector<unsigned> column_ind;
-    // ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
+    if (patch_table.size() != width * height)
+        patch_table.resize(width * height);
 
-    // cout << "Saving image as received: " << endl;
-    // save_image("received.png", magnitudes, width, height, 1);
-    // vector<unsigned> Gx;
-    // vector<unsigned> Gy;
+    // 2D Arrays used to calculate Gx, Gy, Magnitude and Angles
+    int horizontalDiff[height][width]; // 2D Horizontal Image differences (Gy)
+    int verticalDiff[height][width]; // 2D Vertical Image differences (Gx)
+    int mag2d[height][width];    // 2D Calculated Magnitudes for image
+    float ang2d[height][width];  // 2D Calculated Angles for image
 
-    // Histogram of Gradients:[
-    // for (int i=0; i<magnitudes.size()-1-(2*width+2); i++){
-    int img2d[height][width];
-    // vector<vector<int>> img2d;
-
-    for (int i=0; i<height; i++){
-        for (int j=0; j<width; j++) {
-        img2d[i][j] = img[i*width+j];
-        }
-    }
-    int img2dhororg[height][width];
-    int img2dverorg[height][width];
-    // vector<vector<float>> img2dmag(height, vector<float> (width, 0));
-    int img2dmag[height][width];
-    float img2dang[height][width];
-
+    // Vectors used to pass image to save_image function
     vector<float> Gx = img;
     vector<float> Gy = img;
     vector<float> magnitudes = img;
     vector<float> angles = img;
 
-    ///horizontal
+    // Histogram of Gradients:[
+    int img2d[height][width];
+
+    // Converting from 1D image to 2D (not efficient, but makes for cleaner and easier code)
+    for (int i=0; i<height; i++){
+        for (int j=0; j<width; j++) {
+            img2d[i][j] = img[i*width+j];
+        }
+    }
+
+    /// Horizontal
     int max=-200, min=2000;
 
-    // TODO: CHANGE TO 0 i=0 ...
-    // Why <-255 becauyse of equation makes -512 min
-    //black = max neg
-    // white = max pos
-    // grey = 0 (or mid)
-
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-            int curr=img2d[i-1][j-1]+2*img2d[i-1][j]+img2d[i-1][j+1]-img2d[i+1][j-1]-2*img2d[i+1][j]-img2d[i+1][j+1];
-            img2dhororg[i][j] = curr;
+    for (int i=1; i<height-2; i++){
+        for (int j=1; j<width-2; j++) {
+            int curr = img2d[i-1][j-1]+2*img2d[i-1][j]+img2d[i-1][j+1]-img2d[i+1][j-1]-2*img2d[i+1][j]-img2d[i+1][j+1];
+            // Other implementation: (((img2d[i+2][j+1])*2+img2d[i+2][j]+img2d[i+2][j+2]) - (img2d[i][j+1]*2+img2d[i][j]+img2d[i][j+2]));
+            horizontalDiff[i][j] = curr;
             Gx[i*width+j] = curr;
             if (curr>max) max = curr;
             if (curr<min) min = curr;
         }
     }
-    // cout << "max = " << max << endl << "min = " << min << endl;
 
-    for (int i=1; i<height-1; i++){
-        for (int j=1; j<width-1; j++) {
-        Gx[i*width+j] += 512;
+    // Scaling image:
+    // Step 1. Add 512 (minimum possible amount)
+    for (int i=0; i<height; i++){
+        for (int j=0; j<width; j++) {
+            Gx[i*width+j] += 512;
         }
     }
 
-    //Image dependant scaling
-    // Should be image independant. 
-    // instead of abs(min) should add 512 instead of abs(min)
+    // Step 2. Divide all cells by the ratio (abs(min)+max)/255
     float ratio = (512+512)/255.0;
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++){
-        Gx[i*width+j] /= ratio;
+            Gx[i*width+j] /= ratio;
         }
     }
-
-
-    // for (int i=0; i<height; i++) {
-    //     for (int j=0; j<width; j++) {
-    //     Gx[i*width+j]=img2dhororg[i][j];
-    //     }
-    // }
 
     cout << "Now saving Gx image: "<< endl;
     save_image("Gx.png", Gx, height, width, 1);
@@ -1615,7 +1451,7 @@ void precompute_HOG_BM(
     for (int i=1; i<height-1; i++){
         for (int j=1; j<width-1; j++) {
             int curr=img2d[i-1][j-1]+2*img2d[i][j-1]+img2d[i+1][j-1]-img2d[i-1][j+1]-2*img2d[i][j+1]-img2d[i+1][j+1];
-            img2dverorg[i][j] = curr;
+            verticalDiff[i][j] = curr;
             Gy[i*width+j] = curr;
             if (curr>max) max = curr;
             if (curr<min) min = curr;
@@ -1625,7 +1461,7 @@ void precompute_HOG_BM(
     // cout << "max = " << max << endl << "min = " << min << endl;
     for (int i=1; i<height-1; i++){
         for (int j=1; j<width-1; j++) {
-        Gy[i*width+j] += abs(min);
+            Gy[i*width+j] += abs(min);
         }
     }
 
@@ -1633,73 +1469,62 @@ void precompute_HOG_BM(
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++){
-        Gy[i*width+j] /= ratio;
+            Gy[i*width+j] /= ratio;
         }
     }
-
-
-    // for (int i=0; i<height; i++) {
-    //     for (int j=0; j<width; j++) {
-    //     Gy[i*width+j]=img2dverorg[i][j];
-    //     }
-    // }
 
     cout << "Now saving Gy image: "<< endl;
     save_image("Gy.png", Gy, height, width, 1);
     cout << "Done saving" << endl;
 
-    ///magnitude - we know range is 0-255 so max and min should be numbers inside range
-    max=-200; min=2000;
+    ///magnitude - we know range is 0-255 so max and min should be numbers just outside range
+    max=-256; min=2000;
 
+    // Magnitude for each pixel
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
-            img2dmag[i][j] = sqrt(pow(img2dhororg[i][j], 2)+pow(img2dverorg[i][j], 2));
-            if (img2dmag[i][j]>max) max = img2dmag[i][j];
-            if (img2dmag[i][j]<min) min = img2dmag[i][j];
+            mag2d[i][j] = sqrt(pow(horizontalDiff[i][j], 2)+pow(verticalDiff[i][j], 2));
+            if (mag2d[i][j]>max) max = mag2d[i][j];
+            if (mag2d[i][j]<min) min = mag2d[i][j];
         }
     }
 
-    // max=-200; min=2000;
-    //angles
+    // Angle for each pixel
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
-            if (img2dhororg[i][j] !=0 ){
-                float thisAngle = atanf(img2dverorg[i][j]/img2dhororg[i][j]);
+            if (verticalDiff[i][j] !=0 ){
+                float thisAngle = atanf(horizontalDiff[i][j]/verticalDiff[i][j]);
                 thisAngle = (thisAngle*180/PI)+90;
-                // img2dang[i][j] = (atanf(img2dverorg[i][j]/90) * 180 / PI)+90;
-                img2dang[i][j] = thisAngle;
+                ang2d[i][j] = thisAngle;
             } else {
-                img2dang[i][j] = 90;
+                ang2d[i][j] = 90;
             }
-            // img2dang[i][j] = (atanf(img2dverorg[i][j]/img2dhororg[i][j]) * 180 / PI)+90;
-            // img2dang[i][j] = (atanf(img2dverorg[i][j]/img2dhororg[i][j]) * 180 / PI)+90; //sqrt(pow(img2dhororg[i][j], 2)+pow(img2dverorg[i][j], 2));
-            // if (img2dang[i][j]>max) max = img2dang[i][j];
-            // if (img2dang[i][j]<min) min = img2dang[i][j];
         }
     }
 
     // max will be root(2*512^2) and min will be 0 as per calculation (512^2 * 2)
-    int diff = max - min;
+    // pow(2^9, 2) == 2^18. Then 2^18 * 2 == max of 2^19, Then sqr(2^19) == 2^10 = 1024 
+    int diff = 1024 - 0;
 
-    // cout << "Max = " << max << endl;
-    // cout << "Min = " << min << endl;
-
+    // Normalizing each magnitude value, independant of image.
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++){
-            float abc = (img2dmag[i][j]-min)/(diff*1.0);
-            img2dmag[i][j] = abc* 255;
+            float k = (mag2d[i][j]-0)/(diff*1.0);
+            mag2d[i][j] = k* 255;
         }
     } 
 
+    // Copying magnitudes 2d array to 1d vector
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
-            magnitudes[i*width+j]=img2dmag[i][j];
+            magnitudes[i*width+j]=mag2d[i][j];
         }
     }
 
+    // Copying angles 2d array to 1d vector
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
-            angles[i*width+j]=img2dang[i][j];
+            angles[i*width+j]=ang2d[i][j];
         }
     }
 
@@ -1707,122 +1532,296 @@ void precompute_HOG_BM(
     save_image("mags.png", magnitudes, height, width, 1);
     cout << "Done saving" << endl;
 
-
     cout << "Now saving angles image: "<< endl;
     save_image("angs.png", angles, height, width, 1);
     cout << "Done saving" << endl;
 
-    // for (int i=0; i<magnitudes.size()-1-(2*width+2); i++){
-    //     int i1 = i+width;
-    //     int i2 = i+(width*2);
+    //! Row and Column Indexes are used to keep track of the patches that are within the actual image.
+    //! They are pre-configured to the patch size, allowing us to loop over them without having to worry about patch sizes 
+    vector<unsigned> row_ind;
+    ind_initialize(row_ind, height - kHW + 1, nHW, pHW);
+    vector<unsigned> column_ind;
+    ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
 
-    //     int Gx = (2*img[i2+1]+img[i2]+img[i2+2]) - (2*img[i+1]+img[i]+img[i+2]);
-    //     int Gy = (2*img[i1+2]+img[i+2]+img[i2+2]) - (2*img[i1]+img[i]+img[i2]);
+    // 2D Vector with 9 bins each representing a range of angles 20 degrees wide
+    vector<vector<int> > patch_histogram(height*width, vector<int> (9,0));
 
-    //     magnitudes[i] = sqrtf(Gx*Gx + Gy*Gy);
-    //     angles[i] = (atanf(Gy/Gx) * 180 / PI)+90;
-    //     // angles[i] = atanf(Gy/Gx) * 180 / PI;
+    // REMOVE: // Used to keep track of current patch index, then reveals number of patches
 
-    // }
-    // cout << "Now saving image: "<< endl;
-    // save_image("Test.png", magnitudes, 544, 544, 1);
+     //! Precompute Bloc Matching
+    vector<pair<int, unsigned> > table_distance;
+    //! To avoid reallocation
+    // table_distance.reserve(Ns * Ns);
 
-    // cout << "Now saving image: "<< endl;
-    // save_image("Angles.png", angles, 544, 544, 1);
-
-    int patchNum = 0;
-
-    // cout << "Size()-1 = " << magnitudes.size() << endl;
-    // cout << "height*width= " << height*width << endl;
-
-    vector<vector<float> > patch_histogram(height*width, vector<float> (9,0));
-    cout << "patch_histogram.size() = " << patch_histogram.size() << endl;
-
-/*
-    1 2 3 4 5 6 7
-    x x x x x x x
-    x       x   x
-                x
-
-    1 2 3 4 5 6 7       
-    x x x x x x x
-    x x       x  
-    x            
-
-    1 2 3 4 5 6 7       
-    x x x x x x x
-    x       x   x
-    x       x   x                        
-*/
-
-
-
-    for (int i=0; i < height*width - (width+1)*(kHW+1); patchNum++ ){
-        //i < width*height - (kHW-1)*width;
-        for (unsigned p = 0; p < kHW; p++) //Up to patch size (one dimension) //COLS
+    // Looping through the patches and creating histogram for each patch
+    for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
+    {
+        for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
-            for (unsigned q = 0; q < kHW; q++) {
-                int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-                patch_histogram[patchNum][floor(angles[x]/20)]++;
-                
-                // int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-                // float mag = magnitudes[x];
-                // float ang = angles[x];
-                // // patch_table[patchNum].clear();
-                // // cout << "mag = " << magnitudes[x] << "ang = " << angles[x] << endl;                               
-                // //patch_table[p][0 = 0; 1 = 20; 2 = 40; 3 = 60; 4 = 80; 5 = 100; 6 = 120; 7 = 140; 8 = 160;]
-                // if(ang<=20){
-                //     patch_histogram[patchNum][0] += (1-(ang/20))*mag;
-                //     patch_histogram[patchNum][1] += (ang/20)*mag;
-                // } else if(ang<=40){
-                //     patch_histogram[patchNum][1] += (1-(ang/40))*mag;
-                //     patch_histogram[patchNum][2] += (ang/40)*mag;
-                // } else if(ang<=60){
-                //     patch_histogram[patchNum][2] += (1-(ang/60))*mag;
-                //     patch_histogram[patchNum][3] += (ang/60)*mag;
-                // } else if(ang<=80){
-                //     patch_histogram[patchNum][3] += (1-(ang/80))*mag;
-                //     patch_histogram[patchNum][4] += (ang/80)*mag;
-                // } else if(ang<=100){
-                //     patch_histogram[patchNum][4] += (1-(ang/100))*mag;
-                //     patch_histogram[patchNum][5] += (ang/100)*mag;
-                // } else if(ang<=120){
-                //     patch_histogram[patchNum][5] += (1-(ang/120))*mag;
-                //     patch_histogram[patchNum][6] += (ang/120)*mag;
-                // } else if(ang<=140){
-                //     patch_histogram[patchNum][6] += (1-(ang/140))*mag;
-                //     patch_histogram[patchNum][7] += (ang/140)*mag;
-                // } else if(ang<=160){
-                //     patch_histogram[patchNum][7] += (1-(ang/160))*mag;
-                //     patch_histogram[patchNum][8] += (ang/160)*mag;
-                // } else {
-                //     patch_histogram[patchNum][8] += (ang/180)*mag;
-                //     patch_histogram[patchNum][0] += (1-(ang/180))*mag;
-                // }
-
-                // patch_table[patchNum][]
-                
-                // patch_table[patchNum][(int) img[q*width+p]]++;
-                // value += diff_table[pq]; //Value of all pixels inside patch we're looking at (16x16 ahead)
-                // cout << "patch_intensity_hist["<< patchNum << "][(int) img[" << q << "*" << width << "+" << i <<"]]++" << patch_intensity_hist[patchNum][(int) img[q*width+i]] << endl;
-                // cout << "img[" << q << "*" << width << "+" << i <<"]]++" << (int) img[q*width+i] << endl;
+            //! Initialization
+            const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
+            // Looping through all patches and storing data in histogram
+            for (unsigned p=0; p<kHW; p++){
+                for(unsigned q=0; q<kHW; q++){
+                    int x = k_r + p + q*width; //Current pixel (k_r which is top left) plus p (col index) + q*width to get the row
+                    patch_histogram[k_r][floor(angles[x]/20)]++;
+                }
             }
         }
-        i+=5;
-        if((i%width)>=(width-kHW)){
-            i += ((width - (i%width)) + (4*width));
+    }
+
+    int stupid = 0;
+
+    int x = 0;
+    
+    cout << "first set of patches in my func:" << endl;
+    // Looping through patches again and sorting by 
+    for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
+    {
+        int diff = 0;
+        for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
+        {
+            //! Initialization
+            const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
+            table_distance.clear();
+            // patch_table[k_r].clear();
+            // cout << "HERE" << endl;
+            
+            // 28,000. ~750,000,000
+            // nHW = search window = 16. Full search = 32 in each direction
+            // (32x32)x(32x32) = 1024x1024 = ~1000000
+
+            diff = 0;
+            unsigned n_r = 0;
+
+            for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
+            {
+                for (int di = 0; di <= (int) nHW; di++){
+                    n_r = k_r + dj + nHW + di * Ns;
+                    for(int k=0; k<9; k++){
+                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                        diff += (x*x);
+                    }
+                    table_distance.push_back(make_pair(diff, n_r));
+                    diff = 0;
+                }
+
+                for (int di = - (int) nHW; di < 0; di++){
+                    n_r = k_r + (-dj) + nHW + (-di) * Ns;
+                    for(int k=0; k<9; k++){
+                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                        diff += (x*x);
+                    }
+                    table_distance.push_back(make_pair(diff, n_r + di * width + dj));
+                    diff = 0;
+                }
+            }
+
+            // if(ind_i > nHW && ind_j > nHW){
+            //     for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else if(ind_i > nHW){
+            //     for(unsigned ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else if(ind_j > nHW){
+            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
+            //             if(ind_l == ind_i && ind_m == ind_j)
+            //                 continue;
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // } else {
+            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW+1 && ind_l<row_ind.size(); ind_l++){
+            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
+            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++){
+            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+            //                 diff += (x*x);
+            //             }
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         }
+            //     }
+            // }
+
+            // for(unsigned ind_l = 0; ind_l<=ind_i; ind_l++){
+            //     for(unsigned ind_m=0; ind_m<=ind_j; ind_m++){
+            //         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //         for(int k=0; k<9; k++)
+            //             diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+            //         table_distance.push_back(make_pair(diff, n_r));
+            //         diff = 0;
+            //     }
+            // }
+            // for(unsigned ind_l=ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
+            //     for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW && ind_m<row_ind.size(); ind_m++){
+            //         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //         for(int k=0; k<9; k++)
+            //             diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+            //         table_distance.push_back(make_pair(diff, n_r));
+            //         diff = 0;
+            //     }
+            // }
+            // for(unsigned ind_l = 0; ind_l< row_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_l++){
+            //     for (unsigned ind_m = 0; ind_m < column_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_m++){
+            //         // if(ind_l == ind_i && ind_j == ind_m) {
+            //         //     continue;
+            //         // } else {
+            //             const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
+            //             for(int k=0; k<9; k++)
+            //                 diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
+            //             table_distance.push_back(make_pair(diff, n_r));
+            //             diff = 0;
+            //         // }
+            //     }
+            // }
+            //! We need a power of 2 for the number of similar patches,
+            //! because of the Welsh-Hadamard transform on the third dimension.
+            //! We assume that NHW is already a power of 2
+            const unsigned nSx_r = (NHW > table_distance.size() ?
+                                    closest_power_of_2(table_distance.size()) : NHW);
+            //! Sort patches according to their distance to the reference one
+            partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
+                                            table_distance.end(), ComparaisonFirst);
+            //! Keep a maximum of similar patches
+            for (unsigned n = 0; n < nSx_r; n++){
+                patch_table[k_r].push_back(table_distance[n].second);
+                if (stupid<10)
+                    cout << patch_table[k_r][n] << endl;
+                stupid++;
+            }
         }
     }
+
+    // for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
+    // {
+    //     for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
+    //     {
+    //         //! Initialization
+    //         const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
+    //         table_distance.clear();
+    //         patch_table[k_r].clear();
+
+    //         //! Threshold distances in order to keep similar patches
+    //         for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
+    //         {
+    //             for (int di = 0; di <= (int) nHW; di++)
+    //                 patch_histogram[patchNum][floor(ang2d[i+p][j+q]/20)]++;
+                    
+    //                 if (sum_table[dj + nHW + di * Ns][k_r] < threshold)
+    //                     table_distance.push_back(make_pair(
+    //                                 sum_table[dj + nHW + di * Ns][k_r]
+    //                               , k_r + di * width + dj));
+
+    //             for (int di = - (int) nHW; di < 0; di++)
+    //                 if (sum_table[-dj + nHW + (-di) * Ns][k_r] < threshold)
+    //                     table_distance.push_back(make_pair(
+    //                                 sum_table[-dj + nHW + (-di) * Ns][k_r + di * width + dj]
+    //                               , k_r + di * width + dj));
+    //         }
+
+    //         //! We need a power of 2 for the number of similar patches,
+    //         //! because of the Welsh-Hadamard transform on the third dimension.
+    //         //! We assume that NHW is already a power of 2
+    //         const unsigned nSx_r = (NHW > table_distance.size() ?
+    //                                 closest_power_of_2(table_distance.size()) : NHW);
+
+    //         //! Sort patches according to their distance to the reference one
+    //         partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
+    //                                         table_distance.end(), ComparaisonFirst);
+
+    //         //! Keep a maximum of NHW similar patches
+    //         for (unsigned n = 0; n < nSx_r; n++)
+    //             patch_table[k_r].push_back(table_distance[n].second);
+    //     }
+    // }
+
+    // Looping from nHW on i and j so that we only start from real image, not the boundary
+    // for (int i=nHW; i<height-nHW-kHW+1; ){
+    //     for (int j=nHW; j<width-nHW-kHW+1;patchNum++){
+    //         for (unsigned p=0; p<kHW; p++){
+    //             for(unsigned q=0; q<kHW; q++){
+    //                 int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
+    //                 patch_histogram[patchNum][floor(ang2d[i+p][j+q]/20)]++;
+    //             }
+    //         }
+    //         j+=3; 
+    //     }
+    //     i+=3;
+    // }
+
+    // Creating a vector of size patchNum that holds the max amount of similar patches (NHW)
+    // vector<vector<unsigned> > patchSimilarity(patchNum, vector<unsigned> (NHW, 0)); 
+    // vector<pair<int, int> > table_distance;
+    // for(int i=nHW; i<)
+    // vector<vector<tuple<int, int, float> > > distance_table;
+
+    // cout << "patchNum = " << patchNum << endl;
+
+    // // Sorting patches based on similarity:
+    // for(int i=0; i<patchNum; i++){
+    //     // map<int, int> distance_pairs;
+    //     table_distance.clear();
+
+    //     for(int j=0; j<patchNum; j++){
+    //         if(i==j) break; // We dont want to compare the same patch with itself
+    //         unsigned diff = 0;
+    //         for(int k=0; k<9; k++){
+    //             diff+= pow(patch_histogram[i][k]-patch_histogram[j][k], 2);
+    //         }
+    //         table_distance.push_back(make_pair(j, diff));
+    //         // distance_pairs[j] = diff;            
+    //     }
+    //     sort(table_distance.begin(), table_distance.end(), sortFunction);
+
+    //     // for(int k=0; k<NHW; k++){
+    //     //     // patch_table[patchNum];
+    //     // }
+    // }
 
     // cout << "PatchNum = " << patchNum << endl;
 
-    cout << "Printing first 10 patches" << endl;
-    for(int x = 0; x < 10; x++){
-        for (int y = 0; y<9; y++){
-            cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
-        }
-    }
-    // printHistogram(patch_histogram, 10);
+    // cout << "Printing first 5 patches" << endl;
+    // for(int x = 0; x < 5; x++){
+    //     for (int y = 0; y<9; y++){
+    //         cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
+    //     }
+    // }
+    // cout << "Printing second 5 patches" << endl;
+    // for(int x = 0; x < 5; x++){
+    //     for (int y = 0; y<9; y++){
+    //         cout << "patch_histogram2[" << x << "][" << y << "] = " << patch_histogram2[x][y] << endl;
+    //     }
+    // }
 }
 
 /**
@@ -1867,9 +1866,3 @@ void sd_weighting(
         weight_table[c] = (res > 0.0f ? 1.0f / sqrtf(res) : 0.0f);
     }
 }
-
-
-
-
-
-

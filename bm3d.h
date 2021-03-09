@@ -198,4 +198,9 @@ void precompute_HOG_BM(
 ,   const float    tauMatch
 );
 
+void printHistogram(
+    float arr[],
+    int n
+); 
+
 #endif // BM3D_H_INCLUDED
