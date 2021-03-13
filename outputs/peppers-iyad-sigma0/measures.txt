@@ -1,0 +1,8 @@
+
+************
+-sigma           = 0
+-PSNR_basic      = 66.7322
+-RMSE_basic      = 0.117471
+-PSNR            = -nan
+-RMSE            = -nan
+

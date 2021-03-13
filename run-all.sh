@@ -1,0 +1,9 @@
+./squares.sh
+./triangles.sh
+./circles.sh
+./complex.sh
+./lenas.sh
+./peppers.sh
+./baboons.sh
+./goldhills.sh
+./boats.sh
