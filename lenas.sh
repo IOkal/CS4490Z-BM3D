@@ -39,3 +39,8 @@ mv ./ImDiff.png outputs/lena-iyad-sigma30/.
 mv ./ImDenoised.png outputs/lena-iyad-sigma30/.
 mv ./ImBasic.png outputs/lena-iyad-sigma30/.
 mv ./measures.txt outputs/lena-iyad-sigma30/.
+
+cp lena.png outputs/lena-iyad-sigma0/.
+cp lena.png outputs/lena-iyad-sigma1/.
+cp lena.png outputs/lena-iyad-sigma10/.
+cp lena.png outputs/lena-iyad-sigma30/.

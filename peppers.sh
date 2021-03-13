@@ -12,11 +12,6 @@ mv ./angs.png outputs/peppers-iyad-sigma0/.
 mv ./mags.png outputs/peppers-iyad-sigma0/.
 mv ./Gx.png outputs/peppers-iyad-sigma0/.
 mv ./Gy.png outputs/peppers-iyad-sigma0/.
-mv ./ImNoisy.png outputs/peppers-iyad-sigma0/.
-mv ./ImDiff.png outputs/peppers-iyad-sigma0/.
-mv ./ImDenoised.png outputs/peppers-iyad-sigma0/.
-mv ./ImBasic.png outputs/peppers-iyad-sigma0/.
-mv ./measures.txt outputs/peppers-iyad-sigma0/.
 
 ./BM3Ddenoising peppers.png 1 ImNoisy.png ImBasic.png ImDenoised.png ImDiff.png ImBias.png ImDiffBias.png 0 dct 1 bior 1 opp
 mv ./angs.png outputs/peppers-iyad-sigma1/.
@@ -50,3 +45,8 @@ mv ./ImDiff.png outputs/peppers-iyad-sigma30/.
 mv ./ImDenoised.png outputs/peppers-iyad-sigma30/.
 mv ./ImBasic.png outputs/peppers-iyad-sigma30/.
 mv ./measures.txt outputs/peppers-iyad-sigma30/.    
+
+cp peppers.png outputs/peppers-iyad-sigma0/.
+cp peppers.png outputs/peppers-iyad-sigma1/.
+cp peppers.png outputs/peppers-iyad-sigma10/.
+cp peppers.png outputs/peppers-iyad-sigma30/.

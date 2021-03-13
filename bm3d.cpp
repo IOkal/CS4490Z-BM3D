@@ -1295,7 +1295,7 @@ void precompute_BM(
         }
     int stupid = 0;
     
-    cout << "first set of patches in their func:" << endl;
+    // cout << "first set of patches in their func:" << endl;
         
     //! Precompute Bloc Matching
     vector<pair<float, unsigned> > table_distance;
@@ -1347,9 +1347,9 @@ void precompute_BM(
             //! Keep a maximum of NHW similar patches
             for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-                if (stupid<10)
-                    cout << patch_table[k_r][n] << endl;
-                stupid++;
+                // if (stupid<10)
+                //     cout << patch_table[k_r][n] << endl;
+                // stupid++;
             }
 			//! To avoid problem
 			if (nSx_r == 1)
@@ -1454,9 +1454,9 @@ void precompute_HOG_BM(
         }
     }
 
-    cout << "Now saving Gy image: "<< endl;
+    // cout << "Now saving Gy image: "<< endl;
     save_image("Gy.png", Gy, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
     ///vertical:
     max=-200; min=2000;
@@ -1486,9 +1486,9 @@ void precompute_HOG_BM(
         }
     }
 
-    cout << "Now saving Gx image: "<< endl;
+    // cout << "Now saving Gx image: "<< endl;
     save_image("Gx.png", Gx, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
     ///magnitude - we know range is 0-255 so max and min should be numbers just outside range
     max=-256; min=2000;
@@ -1541,13 +1541,13 @@ void precompute_HOG_BM(
         }
     }
 
-    cout << "Now saving magnitues image: "<< endl;
+    // cout << "Now saving magnitues image: "<< endl;
     save_image("mags.png", magnitudes, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
-    cout << "Now saving angles image: "<< endl;
+    // cout << "Now saving angles image: "<< endl;
     save_image("angs.png", angles, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
     //! Row and Column Indexes are used to keep track of the patches that are within the actual image.
     //! They are pre-configured to the patch size, allowing us to loop over them without having to worry about patch sizes 
@@ -1587,7 +1587,7 @@ void precompute_HOG_BM(
 
     int x = 0;
     
-    cout << "first set of patches in my func:" << endl;
+    // cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
@@ -1728,9 +1728,9 @@ void precompute_HOG_BM(
             //! Keep a maximum of similar patches
             for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-                if (stupid<10)
-                    cout << patch_table[k_r][n] << endl;
-                stupid++;
+                // if (stupid<10)
+                //     cout << patch_table[k_r][n] << endl;
+                // stupid++;
             }
         }
     }
