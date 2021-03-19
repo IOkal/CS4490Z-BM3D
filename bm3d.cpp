@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <math.h>
 #include <map>
+#include <string.h>
 
 #include "bm3d.h"
 #include "utilities.h"
@@ -43,6 +44,8 @@
 #endif
 
  using namespace std;
+
+ int globalX =0;
 
  bool ComparaisonFirst(pair<float,unsigned> pair1, pair<float,unsigned> pair2)
 {
@@ -574,7 +577,7 @@ void bm3d_2nd_step(
 
     //! Precompute Bloc-Matching
     vector<vector<unsigned> > patch_table;
-    precompute_HOG_BM(patch_table, img_basic, width, height, kWien, NWien, nWien, pWien, tauMatch);
+    precompute_HOG_BM(patch_table, img_noisy, width, height, kWien, NWien, nWien, pWien, tauMatch);
 
     //! Preprocessing of Bior table
     vector<float> lpd, hpd, lpr, hpr;
@@ -1292,7 +1295,7 @@ void precompute_BM(
         }
     int stupid = 0;
     
-    cout << "first set of patches in their func:" << endl;
+    // cout << "first set of patches in their func:" << endl;
         
     //! Precompute Bloc Matching
     vector<pair<float, unsigned> > table_distance;
@@ -1344,9 +1347,9 @@ void precompute_BM(
             //! Keep a maximum of NHW similar patches
             for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-                if (stupid<10)
-                    cout << patch_table[k_r][n] << endl;
-                stupid++;
+                // if (stupid<10)
+                //     cout << patch_table[k_r][n] << endl;
+                // stupid++;
             }
 			//! To avoid problem
 			if (nSx_r == 1)
@@ -1389,9 +1392,9 @@ void precompute_HOG_BM(
         patch_table.resize(width * height);
 
     // 2D Arrays used to calculate Gx, Gy, Magnitude and Angles
-    int horizontalDiff[height][width]; // 2D Horizontal Image differences (Gy)
-    int verticalDiff[height][width]; // 2D Vertical Image differences (Gx)
-    int mag2d[height][width];    // 2D Calculated Magnitudes for image
+    float horizontalDiff[height][width]; // 2D Horizontal Image differences (Gy)
+    float verticalDiff[height][width]; // 2D Vertical Image differences (Gx)
+    float mag2d[height][width];    // 2D Calculated Magnitudes for image
     float ang2d[height][width];  // 2D Calculated Angles for image
 
     // Vectors used to pass image to save_image function
@@ -1400,7 +1403,7 @@ void precompute_HOG_BM(
     vector<float> magnitudes = img;
     vector<float> angles = img;
 
-    // Histogram of Gradients:[
+    // 2D array used to process image
     int img2d[height][width];
 
     // Converting from 1D image to 2D (not efficient, but makes for cleaner and easier code)
@@ -1410,40 +1413,50 @@ void precompute_HOG_BM(
         }
     }
 
-    /// Horizontal
-    int max=-200, min=2000;
+    /// Horizontal Difference (Gy)
+    int max=-1070, min=2000;
 
-    for (int i=1; i<height-2; i++){
-        for (int j=1; j<width-2; j++) {
+    for (int i=1; i<height-1; i++){
+        for (int j=1; j<width-1; j++) {
             int curr = img2d[i-1][j-1]+2*img2d[i-1][j]+img2d[i-1][j+1]-img2d[i+1][j-1]-2*img2d[i+1][j]-img2d[i+1][j+1];
             // Other implementation: (((img2d[i+2][j+1])*2+img2d[i+2][j]+img2d[i+2][j+2]) - (img2d[i][j+1]*2+img2d[i][j]+img2d[i][j+2]));
             horizontalDiff[i][j] = curr;
-            Gx[i*width+j] = curr;
+            Gy[i*width+j] = curr;
             if (curr>max) max = curr;
             if (curr<min) min = curr;
         }
     }
 
+    // for(int i=1; i<height-1; i++){
+    //     for(int j=1; j<width-1; j++){
+    //         cout << Gy[i*width+j] << "\t";
+    //     }
+    //     cout << endl;
+    // }
+
+    // cout << "Max = " << max << endl << "Min = " << min << endl;
+
     // Scaling image:
-    // Step 1. Add 512 (minimum possible amount)
+    // Step 1. Add abs(min) (minimum possible amount)
     for (int i=0; i<height; i++){
         for (int j=0; j<width; j++) {
-            Gx[i*width+j] += 512;
+            Gy[i*width+j] += abs(min);
         }
     }
 
     // Step 2. Divide all cells by the ratio (abs(min)+max)/255
-    float ratio = (512+512)/255.0;
+    // float ratio = (512+512)/255.0;
+    float ratio = (max+abs(min))/255.0;
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++){
-            Gx[i*width+j] /= ratio;
+            Gy[i*width+j] /= ratio;
         }
     }
 
-    cout << "Now saving Gx image: "<< endl;
-    save_image("Gx.png", Gx, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Now saving Gy image: "<< endl;
+    save_image("Gy.png", Gy, height, width, 1);
+    // cout << "Done saving" << endl;
 
     ///vertical:
     max=-200; min=2000;
@@ -1452,7 +1465,7 @@ void precompute_HOG_BM(
         for (int j=1; j<width-1; j++) {
             int curr=img2d[i-1][j-1]+2*img2d[i][j-1]+img2d[i+1][j-1]-img2d[i-1][j+1]-2*img2d[i][j+1]-img2d[i+1][j+1];
             verticalDiff[i][j] = curr;
-            Gy[i*width+j] = curr;
+            Gx[i*width+j] = curr;
             if (curr>max) max = curr;
             if (curr<min) min = curr;
         }
@@ -1461,7 +1474,7 @@ void precompute_HOG_BM(
     // cout << "max = " << max << endl << "min = " << min << endl;
     for (int i=1; i<height-1; i++){
         for (int j=1; j<width-1; j++) {
-            Gy[i*width+j] += abs(min);
+            Gx[i*width+j] += abs(min);
         }
     }
 
@@ -1469,13 +1482,13 @@ void precompute_HOG_BM(
 
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++){
-            Gy[i*width+j] /= ratio;
+            Gx[i*width+j] /= ratio;
         }
     }
 
-    cout << "Now saving Gy image: "<< endl;
-    save_image("Gy.png", Gy, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Now saving Gx image: "<< endl;
+    save_image("Gx.png", Gx, height, width, 1);
+    // cout << "Done saving" << endl;
 
     ///magnitude - we know range is 0-255 so max and min should be numbers just outside range
     max=-256; min=2000;
@@ -1493,8 +1506,8 @@ void precompute_HOG_BM(
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
             if (verticalDiff[i][j] !=0 ){
-                float thisAngle = atanf(horizontalDiff[i][j]/verticalDiff[i][j]);
-                thisAngle = (thisAngle*180/PI)+90;
+                float thisAngle = atanf((float) horizontalDiff[i][j]/(float)verticalDiff[i][j]);
+                thisAngle = ((float) thisAngle*180.0/PI)+90;    
                 ang2d[i][j] = thisAngle;
             } else {
                 ang2d[i][j] = 90;
@@ -1528,13 +1541,13 @@ void precompute_HOG_BM(
         }
     }
 
-    cout << "Now saving magnitues image: "<< endl;
+    // cout << "Now saving magnitues image: "<< endl;
     save_image("mags.png", magnitudes, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
-    cout << "Now saving angles image: "<< endl;
+    // cout << "Now saving angles image: "<< endl;
     save_image("angs.png", angles, height, width, 1);
-    cout << "Done saving" << endl;
+    // cout << "Done saving" << endl;
 
     //! Row and Column Indexes are used to keep track of the patches that are within the actual image.
     //! They are pre-configured to the patch size, allowing us to loop over them without having to worry about patch sizes 
@@ -1574,7 +1587,7 @@ void precompute_HOG_BM(
 
     int x = 0;
     
-    cout << "first set of patches in my func:" << endl;
+    // cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
@@ -1715,9 +1728,9 @@ void precompute_HOG_BM(
             //! Keep a maximum of similar patches
             for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
-                if (stupid<10)
-                    cout << patch_table[k_r][n] << endl;
-                stupid++;
+                // if (stupid<10)
+                //     cout << patch_table[k_r][n] << endl;
+                // stupid++;
             }
         }
     }
