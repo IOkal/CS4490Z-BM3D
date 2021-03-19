@@ -1,8 +1,0 @@
-
-************
--sigma           = 0
--PSNR_basic      = 65.6365
--RMSE_basic      = 0.133265
--PSNR            = -nan
--RMSE            = -nan
-
