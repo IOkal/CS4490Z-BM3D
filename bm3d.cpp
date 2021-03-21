@@ -1386,10 +1386,11 @@ void precompute_HOG_BM(
 ){
     //! Declarations
     const unsigned Ns = 2 * nHW + 1;
-    const float threshold = tauMatch * kHW * kHW;
-    vector<float> diff_table(width * height);
     if (patch_table.size() != width * height)
         patch_table.resize(width * height);
+    const float threshold = tauMatch * kHW * kHW;
+    vector<float> diff_table(width * height);
+    vector<vector<float> > sum_table((nHW + 1) * Ns, vector<float> (width * height, 2 * threshold));
 
     // 2D Arrays used to calculate Gx, Gy, Magnitude and Angles
     float horizontalDiff[height][width]; // 2D Horizontal Image differences (Gy)
@@ -1509,6 +1510,8 @@ void precompute_HOG_BM(
                 float thisAngle = atanf((float) horizontalDiff[i][j]/(float)verticalDiff[i][j]);
                 thisAngle = ((float) thisAngle*180.0/PI)+90;    
                 ang2d[i][j] = thisAngle;
+            } else if (horizontalDiff[i][j] == 0 && verticalDiff[i][j] ==0 ){
+                ang2d[i][j] = 0;
             } else {
                 ang2d[i][j] = 90;
             }
@@ -1586,7 +1589,82 @@ void precompute_HOG_BM(
     int stupid = 0;
 
     int x = 0;
-    
+    float distance = 0;
+    float alpha = 0;
+    float thresh = 0;
+
+    /*
+    *
+    *   Original BM3D Code:
+    * 
+    */
+//    const unsigned Ns = 2 * nHW + 1;
+
+    //! For each possible distance, precompute inter-patches distance
+    for (unsigned di = 0; di <= nHW; di++)
+        for (unsigned dj = 0; dj < Ns; dj++)
+        {
+            const int dk = (int) (di * width + dj) - (int) nHW;
+            const unsigned ddk = di * Ns + dj;
+
+            //! Process the image containing the square distance between pixels
+            for (unsigned i = nHW; i < height - nHW; i++)
+            {
+                unsigned k = i * width + nHW;
+                for (unsigned j = nHW; j < width - nHW; j++, k++)
+                    diff_table[k] = (img[k + dk] - img[k]) * (img[k + dk] - img[k]);
+            }
+
+            //! Compute the sum for each patches, using the method of the integral images
+            const unsigned dn = nHW * width + nHW;
+            //! 1st patch, top left corner
+            float value = 0.0f;
+            for (unsigned p = 0; p < kHW; p++)
+            {
+                unsigned pq = p * width + dn;
+                for (unsigned q = 0; q < kHW; q++, pq++)
+                    value += diff_table[pq];
+            }
+            sum_table[ddk][dn] = value;
+
+            //! 1st row, top
+            for (unsigned j = nHW + 1; j < width - nHW; j++)
+            {
+                const unsigned ind = nHW * width + j - 1;
+                float sum = sum_table[ddk][ind];
+                for (unsigned p = 0; p < kHW; p++)
+                    sum += diff_table[ind + p * width + kHW] - diff_table[ind + p * width];
+                sum_table[ddk][ind + 1] = sum;
+            }
+
+            //! General case
+            for (unsigned i = nHW + 1; i < height - nHW; i++)
+            {
+                const unsigned ind = (i - 1) * width + nHW;
+                float sum = sum_table[ddk][ind];
+                //! 1st column, left
+                for (unsigned q = 0; q < kHW; q++)
+                    sum += diff_table[ind + kHW * width + q] - diff_table[ind + q];
+                sum_table[ddk][ind + width] = sum;
+
+                //! Other columns
+                unsigned k = i * width + nHW + 1;
+                unsigned pq = (i + kHW - 1) * width + kHW - 1 + nHW + 1;
+                for (unsigned j = nHW + 1; j < width - nHW; j++, k++, pq++)
+                {
+                    sum_table[ddk][k] =
+                          sum_table[ddk][k - 1]
+                        + sum_table[ddk][k - width]
+                        - sum_table[ddk][k - 1 - width]
+                        + diff_table[pq]
+                        - diff_table[pq - kHW]
+                        - diff_table[pq - kHW * width]
+                        + diff_table[pq - kHW - kHW * width];
+                }
+
+            }
+        }
+
     // cout << "first set of patches in my func:" << endl;
     // Looping through patches again and sorting by 
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
@@ -1597,6 +1675,7 @@ void precompute_HOG_BM(
             //! Initialization
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
             table_distance.clear();
+            patch_table[k_r].clear();
             // patch_table[k_r].clear();
             // cout << "HERE" << endl;
             
@@ -1606,16 +1685,18 @@ void precompute_HOG_BM(
 
             diff = 0;
             unsigned n_r = 0;
-
+            
             for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
             {
                 for (int di = 0; di <= (int) nHW; di++){
-                    n_r = k_r + dj + nHW + di * Ns;
+                    n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
                     for(int k=0; k<9; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
-                    table_distance.push_back(make_pair(diff, n_r));
+                    distance = sum_table[dj + nHW + di * Ns][k_r];
+                    thresh = alpha*distance + (1-alpha)*diff;
+                    table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
                     diff = 0;
                 }
 
@@ -1625,7 +1706,10 @@ void precompute_HOG_BM(
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
-                    table_distance.push_back(make_pair(diff, n_r + di * width + dj));
+                    // distance = pow(n_r-k_r, 2);
+                    distance = sum_table[-dj + nHW + (-di) * Ns][k_r + di * width + dj];
+                    thresh = alpha*distance + (1-alpha)*diff;
+                    table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
                     diff = 0;
                 }
             }

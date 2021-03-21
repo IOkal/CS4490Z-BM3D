@@ -2,49 +2,40 @@
 
 make
 ./BM3Ddenoising complex-512x512.png 0 ImNoisy.png ImBasic.png ImDenoised.png ImDiff.png ImBias.png ImDiffBias.png 0 dct 1 bior 1 opp
-cp ./angs.png complex-iyad-sigma0/.
-cp ./mags.png complex-iyad-sigma0/.
-cp ./Gx.png complex-iyad-sigma0/.
-cp ./Gy.png complex-iyad-sigma0/.
+mv ./angs.png outputs/complex-iyad-sigma0/.
+mv ./mags.png outputs/complex-iyad-sigma0/.
+mv ./Gx.png outputs/complex-iyad-sigma0/.
+mv ./Gy.png outputs/complex-iyad-sigma0/.
 
 ./BM3Ddenoising complex-512x512.png 1 ImNoisy.png ImBasic.png ImDenoised.png ImDiff.png ImBias.png ImDiffBias.png 0 dct 1 bior 1 opp
-cp ./angs.png complex-iyad-sigma1/.
-cp ./mags.png complex-iyad-sigma1/.
-cp ./Gx.png complex-iyad-sigma1/.
-cp ./Gy.png complex-iyad-sigma1/.
-cp ./ImNoisy.png complex-iyad-sigma1/.
-cp ./ImDiff.png complex-iyad-sigma1/.
-cp ./ImDenoised.png complex-iyad-sigma1/.
-cp ./ImBasic.png complex-iyad-sigma1/.
-cp ./measures.txt complex-iyad-sigma1/.
+mv ./angs.png outputs/complex-iyad-sigma1/.
+mv ./mags.png outputs/complex-iyad-sigma1/.
+mv ./Gx.png outputs/complex-iyad-sigma1/.
+mv ./Gy.png outputs/complex-iyad-sigma1/.
+mv ./ImNoisy.png outputs/complex-iyad-sigma1/.
+mv ./ImDiff.png outputs/complex-iyad-sigma1/.
+mv ./ImDenoised.png outputs/complex-iyad-sigma1/.
+mv ./ImBasic.png outputs/complex-iyad-sigma1/.
+mv ./measures.txt outputs/complex-iyad-sigma1/.
 
 ./BM3Ddenoising complex-512x512.png 10 ImNoisy.png ImBasic.png ImDenoised.png ImDiff.png ImBias.png ImDiffBias.png 0 dct 1 bior 1 opp
-cp ./angs.png complex-iyad-sigma10/.
-cp ./mags.png complex-iyad-sigma10/.
-cp ./Gx.png complex-iyad-sigma10/.
-cp ./Gy.png complex-iyad-sigma10/.
-cp ./ImNoisy.png complex-iyad-sigma10/.
-cp ./ImDiff.png complex-iyad-sigma10/.
-cp ./ImDenoised.png complex-iyad-sigma10/.
-cp ./ImBasic.png complex-iyad-sigma10/.
-cp ./measures.txt complex-iyad-sigma10/.
+mv ./angs.png outputs/complex-iyad-sigma10/.
+mv ./mags.png outputs/complex-iyad-sigma10/.
+mv ./Gx.png outputs/complex-iyad-sigma10/.
+mv ./Gy.png outputs/complex-iyad-sigma10/.
+mv ./ImNoisy.png outputs/complex-iyad-sigma10/.
+mv ./ImDiff.png outputs/complex-iyad-sigma10/.
+mv ./ImDenoised.png outputs/complex-iyad-sigma10/.
+mv ./ImBasic.png outputs/complex-iyad-sigma10/.
+mv ./measures.txt outputs/complex-iyad-sigma10/.
 
 ./BM3Ddenoising complex-512x512.png 30 ImNoisy.png ImBasic.png ImDenoised.png ImDiff.png ImBias.png ImDiffBias.png 0 dct 1 bior 1 opp
-cp ./angs.png complex-iyad-sigma30/.
-cp ./mags.png complex-iyad-sigma30/.
-cp ./Gx.png complex-iyad-sigma30/.
-cp ./Gy.png complex-iyad-sigma30/.
-cp ./ImNoisy.png complex-iyad-sigma30/.
-cp ./ImDiff.png complex-iyad-sigma30/.
-cp ./ImDenoised.png complex-iyad-sigma30/.
-cp ./ImBasic.png complex-iyad-sigma30/.
-cp ./measures.txt complex-iyad-sigma30/.
-
-rm angs.png
-rm mags.png
-rm Gx.png
-rm Gy.png
-rm ImNoisy.png
-rm ImDiff.png
-rm ImDenoised.png
-rm ImBasic.png
+mv ./angs.png outputs/complex-iyad-sigma30/.
+mv ./mags.png outputs/complex-iyad-sigma30/.
+mv ./Gx.png outputs/complex-iyad-sigma30/.
+mv ./Gy.png outputs/complex-iyad-sigma30/.
+mv ./ImNoisy.png outputs/complex-iyad-sigma30/.
+mv ./ImDiff.png outputs/complex-iyad-sigma30/.
+mv ./ImDenoised.png outputs/complex-iyad-sigma30/.
+mv ./ImBasic.png outputs/complex-iyad-sigma30/.
+mv ./measures.txt outputs/complex-iyad-sigma30/.

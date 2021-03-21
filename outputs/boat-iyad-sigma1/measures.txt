@@ -1,8 +1,8 @@
 
 ************
 -sigma           = 1
--PSNR_basic      = 48.366
--RMSE_basic      = 0.97329
--PSNR            = 41.8301
--RMSE            = 2.06555
+-PSNR_basic      = 48.4427
+-RMSE_basic      = 0.964732
+-PSNR            = 41.688
+-RMSE            = 2.09963
 
