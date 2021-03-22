@@ -96,6 +96,7 @@ int run_bm3d(
 ,   const unsigned tau_2D_hard
 ,   const unsigned tau_2D_wien
 ,   const unsigned color_space
+,   float alpha
 ){
     //! Parameters
     const unsigned nHard = 16; //! Half size of the search window
@@ -164,7 +165,7 @@ int run_bm3d(
         cout << "step 1...";
         bm3d_1st_step(sigma, img_sym_noisy, img_sym_basic, w_b, h_b, chnls, nHard,
                       kHard, NHard, pHard, useSD_h, color_space, tau_2D_hard,
-                      &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0]);
+                      &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0], alpha);
         cout << "done." << endl;
 
         //! To avoid boundaries problem
@@ -194,7 +195,7 @@ int run_bm3d(
         cout << "step 2...";
         bm3d_2nd_step(sigma, img_sym_noisy, img_sym_basic, img_sym_denoised,
                 w_b, h_b, chnls, nWien, kWien, NWien, pWien, useSD_w, color_space,
-                tau_2D_wien, &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0]);
+                tau_2D_wien, &plan_2d_for_1[0], &plan_2d_for_2[0], &plan_2d_inv[0], alpha);
         cout << "done." << endl;
 
         //! Obtention of img_denoised
@@ -243,7 +244,7 @@ int run_bm3d(
                 bm3d_1st_step(sigma, sub_noisy[n], sub_basic[n], w_table[n],
                               h_table[n], chnls, nHard, kHard, NHard, pHard, useSD_h,
                               color_space, tau_2D_hard, &plan_2d_for_1[n],
-                              &plan_2d_for_2[n], &plan_2d_inv[n]);
+                              &plan_2d_for_2[n], &plan_2d_inv[n], alpha);
             }
         }
         cout << "done." << endl;
@@ -279,7 +280,7 @@ int run_bm3d(
                 bm3d_2nd_step(sigma, sub_noisy[n], sub_basic[n], sub_denoised[n],
                               w_table[n], h_table[n], chnls, nWien, kWien, NWien, pWien,
                               useSD_w, color_space, tau_2D_wien, &plan_2d_for_1[n],
-                              &plan_2d_for_2[n], &plan_2d_inv[n]);
+                              &plan_2d_for_2[n], &plan_2d_inv[n], alpha);
             }
         }
         cout << "done." << endl;
@@ -347,6 +348,7 @@ void    bm3d_1st_step(
 ,   fftwf_plan *  plan_2d_for_1
 ,   fftwf_plan *  plan_2d_for_2
 ,   fftwf_plan *  plan_2d_inv
+,   float alpha
 ){  
     //! Estimatation of sigma on each channel
     vector<float> sigma_table(chnls);
@@ -391,7 +393,7 @@ void    bm3d_1st_step(
     // precompute_BM(patch2_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
 
     vector<vector<unsigned> > patch_table;
-    precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch);
+    precompute_HOG_BM(patch_table, img_noisy, width, height, kHard, NHard, nHard, pHard, tauMatch, alpha);
 
     //! table_2D[p * N + q + (i * width + j) * kHard_2 + c * (2 * nHard + 1) * width * kHard_2]
     vector<float> table_2D((2 * nHard + 1) * width * chnls * kHard_2, 0.0f);
@@ -541,6 +543,7 @@ void bm3d_2nd_step(
 ,   fftwf_plan *  plan_2d_for_1
 ,   fftwf_plan *  plan_2d_for_2
 ,   fftwf_plan *  plan_2d_inv
+,   float alpha
 ){
     //! Estimatation of sigma on each channel
     vector<float> sigma_table(chnls);
@@ -577,7 +580,7 @@ void bm3d_2nd_step(
 
     //! Precompute Bloc-Matching
     vector<vector<unsigned> > patch_table;
-    precompute_HOG_BM(patch_table, img_noisy, width, height, kWien, NWien, nWien, pWien, tauMatch);
+    precompute_HOG_BM(patch_table, img_noisy, width, height, kWien, NWien, nWien, pWien, tauMatch, alpha);
 
     //! Preprocessing of Bior table
     vector<float> lpd, hpd, lpr, hpr;
@@ -1382,6 +1385,7 @@ void precompute_HOG_BM(
 ,   const unsigned nHW
 ,   const unsigned pHW
 ,   const float    tauMatch
+,   float alpha
 ){
     //! Declarations
     const unsigned Ns = 2 * nHW + 1;
@@ -1639,8 +1643,43 @@ void precompute_HOG_BM(
     // Initilization of variables used below
     int x = 0;
     float distance = 0;
-    float alpha = 1;
     float thresh = 0;
+
+    cout << "ALPHA = " << alpha << endl;
+
+    // Pass through to find maxDistance and maxDiff
+    float maxDistance = -1;
+    float maxDiff = -1;
+
+    // Looping
+    for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
+    {
+        int diff = 0;
+
+        for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
+        {
+            const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
+            unsigned n_r = 0;
+
+            // nHW = search window = 16. Full search = 32 in each direction            
+            for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
+            {
+                for (int di = 0; di <= (int) nHW; di++){
+                    n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
+                    for(int k=0; k<9; k++){
+                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                        diff += (x*x);
+                    }
+                    distance = sum_table[dj + nHW + di * Ns][k_r];
+                    if (distance > maxDistance)
+                        maxDistance = distance;
+                    if (diff > maxDiff)
+                        maxDiff = diff;
+                    diff = 0;
+                }
+            }
+        }
+    }
 
     // TODO: Create a graph of all the PSNR values at each sigma level (30, 40, ... , 100) with all the different alpha values
     // to make sure that there is in fact a "peak" and not random alpha values.
@@ -1650,7 +1689,7 @@ void precompute_HOG_BM(
     // Then using alpha as the ratio of which block matching method to prioritize.
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
-        int diff = 0;
+        float diff = 0;
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
             //! Initialization
@@ -1671,7 +1710,10 @@ void precompute_HOG_BM(
                         diff += (x*x);
                     }
                     distance = sum_table[dj + nHW + di * Ns][k_r];
-                    thresh = alpha*distance + (1-alpha)*diff;
+                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/maxDiff))*10000;
+
+                    // thresh = alpha*distance + (1-alpha)*diff;
+
                     table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
                     diff = 0;
                 }
@@ -1684,7 +1726,9 @@ void precompute_HOG_BM(
                     }
                     // distance = pow(n_r-k_r, 2);
                     distance = sum_table[-dj + nHW + (-di) * Ns][k_r + di * width + dj];
-                    thresh = alpha*distance + (1-alpha)*diff;
+                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/maxDiff))*10000;
+
+                    // thresh = alpha*distance + (1-alpha)*diff;
                     table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
                     diff = 0;
                 }
