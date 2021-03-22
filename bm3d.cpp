@@ -1293,8 +1293,7 @@ void precompute_BM(
 
             }
         }
-    int stupid = 0;
-    
+   
     // cout << "first set of patches in their func:" << endl;
         
     //! Precompute Bloc Matching
@@ -1428,15 +1427,6 @@ void precompute_HOG_BM(
         }
     }
 
-    // for(int i=1; i<height-1; i++){
-    //     for(int j=1; j<width-1; j++){
-    //         cout << Gy[i*width+j] << "\t";
-    //     }
-    //     cout << endl;
-    // }
-
-    // cout << "Max = " << max << endl << "Min = " << min << endl;
-
     // Scaling image:
     // Step 1. Add abs(min) (minimum possible amount)
     for (int i=0; i<height; i++){
@@ -1503,7 +1493,7 @@ void precompute_HOG_BM(
         }
     }
 
-    // Angle for each pixel
+    // Calculate Angle for each pixel
     for (int i=0; i<height; i++) {
         for (int j=0; j<width; j++) {
             if (verticalDiff[i][j] !=0 ){
@@ -1544,13 +1534,9 @@ void precompute_HOG_BM(
         }
     }
 
-    // cout << "Now saving magnitues image: "<< endl;
+    // Saving magnitudes and angles images
     save_image("mags.png", magnitudes, height, width, 1);
-    // cout << "Done saving" << endl;
-
-    // cout << "Now saving angles image: "<< endl;
     save_image("angs.png", angles, height, width, 1);
-    // cout << "Done saving" << endl;
 
     //! Row and Column Indexes are used to keep track of the patches that are within the actual image.
     //! They are pre-configured to the patch size, allowing us to loop over them without having to worry about patch sizes 
@@ -1561,8 +1547,6 @@ void precompute_HOG_BM(
 
     // 2D Vector with 9 bins each representing a range of angles 20 degrees wide
     vector<vector<int> > patch_histogram(height*width, vector<int> (9,0));
-
-    // REMOVE: // Used to keep track of current patch index, then reveals number of patches
 
      //! Precompute Bloc Matching
     vector<pair<int, unsigned> > table_distance;
@@ -1586,20 +1570,7 @@ void precompute_HOG_BM(
         }
     }
 
-    int stupid = 0;
-
-    int x = 0;
-    float distance = 0;
-    float alpha = 0;
-    float thresh = 0;
-
-    /*
-    *
-    *   Original BM3D Code:
-    * 
-    */
-//    const unsigned Ns = 2 * nHW + 1;
-
+    // Original BM3D Distance based calculation:
     //! For each possible distance, precompute inter-patches distance
     for (unsigned di = 0; di <= nHW; di++)
         for (unsigned dj = 0; dj < Ns; dj++)
@@ -1665,8 +1636,18 @@ void precompute_HOG_BM(
             }
         }
 
-    // cout << "first set of patches in my func:" << endl;
-    // Looping through patches again and sorting by 
+    // Initilization of variables used below
+    int x = 0;
+    float distance = 0;
+    float alpha = 1;
+    float thresh = 0;
+
+    // TODO: Create a graph of all the PSNR values at each sigma level (30, 40, ... , 100) with all the different alpha values
+    // to make sure that there is in fact a "peak" and not random alpha values.
+    // x- sigma, y-alpha, z-psnr
+
+    // Looping through patches again and determining patch histogram value and patch distance.
+    // Then using alpha as the ratio of which block matching method to prioritize.
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
         int diff = 0;
@@ -1674,18 +1655,13 @@ void precompute_HOG_BM(
         {
             //! Initialization
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
-            table_distance.clear();
-            patch_table[k_r].clear();
-            // patch_table[k_r].clear();
-            // cout << "HERE" << endl;
-            
-            // 28,000. ~750,000,000
-            // nHW = search window = 16. Full search = 32 in each direction
-            // (32x32)x(32x32) = 1024x1024 = ~1000000
-
             diff = 0;
             unsigned n_r = 0;
+
+            table_distance.clear();
+            patch_table[k_r].clear();
             
+            // nHW = search window = 16. Full search = 32 in each direction            
             for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
             {
                 for (int di = 0; di <= (int) nHW; di++){
@@ -1714,93 +1690,6 @@ void precompute_HOG_BM(
                 }
             }
 
-            // if(ind_i > nHW && ind_j > nHW){
-            //     for(int ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-            //         for(int ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-            //             if(ind_l == ind_i && ind_m == ind_j)
-            //                 continue;
-            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //             for(int k=0; k<9; k++){
-            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-            //                 diff += (x*x);
-            //             }
-            //             table_distance.push_back(make_pair(diff, n_r));
-            //             diff = 0;
-            //         }
-            //     }
-            // } else if(ind_i > nHW){
-            //     for(unsigned ind_l = ind_i-nHW; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
-            //             if(ind_l == ind_i && ind_m == ind_j)
-            //                 continue;
-            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //             for(int k=0; k<9; k++){
-            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-            //                 diff += (x*x);
-            //             }
-            //             table_distance.push_back(make_pair(diff, n_r));
-            //             diff = 0;
-            //         }
-            //     }
-            // } else if(ind_j > nHW){
-            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-            //         for(unsigned ind_m= ind_j-nHW; ind_m<=ind_j+nHW && ind_m < column_ind.size(); ind_m++){
-            //             if(ind_l == ind_i && ind_m == ind_j)
-            //                 continue;
-            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //             for(int k=0; k<9; k++){
-            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-            //                 diff += (x*x);
-            //             }
-            //             table_distance.push_back(make_pair(diff, n_r));
-            //             diff = 0;
-            //         }
-            //     }
-            // } else {
-            //     for(unsigned ind_l = ind_i+1; ind_l<=ind_i+nHW+1 && ind_l<row_ind.size(); ind_l++){
-            //         for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW+1 && ind_m < column_ind.size(); ind_m++){
-            //             n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //             for(int k=0; k<9; k++){
-            //                 x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-            //                 diff += (x*x);
-            //             }
-            //             table_distance.push_back(make_pair(diff, n_r));
-            //             diff = 0;
-            //         }
-            //     }
-            // }
-
-            // for(unsigned ind_l = 0; ind_l<=ind_i; ind_l++){
-            //     for(unsigned ind_m=0; ind_m<=ind_j; ind_m++){
-            //         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //         for(int k=0; k<9; k++)
-            //             diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
-            //         table_distance.push_back(make_pair(diff, n_r));
-            //         diff = 0;
-            //     }
-            // }
-            // for(unsigned ind_l=ind_i+1; ind_l<=ind_i+nHW && ind_l<row_ind.size(); ind_l++){
-            //     for(unsigned ind_m=ind_j+1; ind_m<=ind_j+nHW && ind_m<row_ind.size(); ind_m++){
-            //         const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //         for(int k=0; k<9; k++)
-            //             diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
-            //         table_distance.push_back(make_pair(diff, n_r));
-            //         diff = 0;
-            //     }
-            // }
-            // for(unsigned ind_l = 0; ind_l< row_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_l++){
-            //     for (unsigned ind_m = 0; ind_m < column_ind.size() && pow(ind_l-ind_i, 2) <= (Ns*Ns); ind_m++){
-            //         // if(ind_l == ind_i && ind_j == ind_m) {
-            //         //     continue;
-            //         // } else {
-            //             const unsigned n_r = row_ind[ind_l] * width + column_ind[ind_m];
-            //             for(int k=0; k<9; k++)
-            //                 diff+= pow(patch_histogram[k_r][k]-patch_histogram[n_r][k], 2);
-            //             table_distance.push_back(make_pair(diff, n_r));
-            //             diff = 0;
-            //         // }
-            //     }
-            // }
             //! We need a power of 2 for the number of similar patches,
             //! because of the Welsh-Hadamard transform on the third dimension.
             //! We assume that NHW is already a power of 2
@@ -1810,115 +1699,10 @@ void precompute_HOG_BM(
             partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
                                             table_distance.end(), ComparaisonFirst);
             //! Keep a maximum of similar patches
-            for (unsigned n = 0; n < nSx_r; n++){
+            for (unsigned n = 0; n < nSx_r; n++)
                 patch_table[k_r].push_back(table_distance[n].second);
-                // if (stupid<10)
-                //     cout << patch_table[k_r][n] << endl;
-                // stupid++;
-            }
         }
     }
-
-    // for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
-    // {
-    //     for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
-    //     {
-    //         //! Initialization
-    //         const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
-    //         table_distance.clear();
-    //         patch_table[k_r].clear();
-
-    //         //! Threshold distances in order to keep similar patches
-    //         for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
-    //         {
-    //             for (int di = 0; di <= (int) nHW; di++)
-    //                 patch_histogram[patchNum][floor(ang2d[i+p][j+q]/20)]++;
-                    
-    //                 if (sum_table[dj + nHW + di * Ns][k_r] < threshold)
-    //                     table_distance.push_back(make_pair(
-    //                                 sum_table[dj + nHW + di * Ns][k_r]
-    //                               , k_r + di * width + dj));
-
-    //             for (int di = - (int) nHW; di < 0; di++)
-    //                 if (sum_table[-dj + nHW + (-di) * Ns][k_r] < threshold)
-    //                     table_distance.push_back(make_pair(
-    //                                 sum_table[-dj + nHW + (-di) * Ns][k_r + di * width + dj]
-    //                               , k_r + di * width + dj));
-    //         }
-
-    //         //! We need a power of 2 for the number of similar patches,
-    //         //! because of the Welsh-Hadamard transform on the third dimension.
-    //         //! We assume that NHW is already a power of 2
-    //         const unsigned nSx_r = (NHW > table_distance.size() ?
-    //                                 closest_power_of_2(table_distance.size()) : NHW);
-
-    //         //! Sort patches according to their distance to the reference one
-    //         partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
-    //                                         table_distance.end(), ComparaisonFirst);
-
-    //         //! Keep a maximum of NHW similar patches
-    //         for (unsigned n = 0; n < nSx_r; n++)
-    //             patch_table[k_r].push_back(table_distance[n].second);
-    //     }
-    // }
-
-    // Looping from nHW on i and j so that we only start from real image, not the boundary
-    // for (int i=nHW; i<height-nHW-kHW+1; ){
-    //     for (int j=nHW; j<width-nHW-kHW+1;patchNum++){
-    //         for (unsigned p=0; p<kHW; p++){
-    //             for(unsigned q=0; q<kHW; q++){
-    //                 int x = i+p+q*width; //Current pixel (i which is top left) plus p (col index) + q*width to get the row
-    //                 patch_histogram[patchNum][floor(ang2d[i+p][j+q]/20)]++;
-    //             }
-    //         }
-    //         j+=3; 
-    //     }
-    //     i+=3;
-    // }
-
-    // Creating a vector of size patchNum that holds the max amount of similar patches (NHW)
-    // vector<vector<unsigned> > patchSimilarity(patchNum, vector<unsigned> (NHW, 0)); 
-    // vector<pair<int, int> > table_distance;
-    // for(int i=nHW; i<)
-    // vector<vector<tuple<int, int, float> > > distance_table;
-
-    // cout << "patchNum = " << patchNum << endl;
-
-    // // Sorting patches based on similarity:
-    // for(int i=0; i<patchNum; i++){
-    //     // map<int, int> distance_pairs;
-    //     table_distance.clear();
-
-    //     for(int j=0; j<patchNum; j++){
-    //         if(i==j) break; // We dont want to compare the same patch with itself
-    //         unsigned diff = 0;
-    //         for(int k=0; k<9; k++){
-    //             diff+= pow(patch_histogram[i][k]-patch_histogram[j][k], 2);
-    //         }
-    //         table_distance.push_back(make_pair(j, diff));
-    //         // distance_pairs[j] = diff;            
-    //     }
-    //     sort(table_distance.begin(), table_distance.end(), sortFunction);
-
-    //     // for(int k=0; k<NHW; k++){
-    //     //     // patch_table[patchNum];
-    //     // }
-    // }
-
-    // cout << "PatchNum = " << patchNum << endl;
-
-    // cout << "Printing first 5 patches" << endl;
-    // for(int x = 0; x < 5; x++){
-    //     for (int y = 0; y<9; y++){
-    //         cout << "patch_histogram[" << x << "][" << y << "] = " << patch_histogram[x][y] << endl;
-    //     }
-    // }
-    // cout << "Printing second 5 patches" << endl;
-    // for(int x = 0; x < 5; x++){
-    //     for (int y = 0; y<9; y++){
-    //         cout << "patch_histogram2[" << x << "][" << y << "] = " << patch_histogram2[x][y] << endl;
-    //     }
-    // }
 }
 
 /**
