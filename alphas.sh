@@ -4,7 +4,7 @@ make
 
 echo "" > alpha-outputs.txt
 
-for i in `seq 0.9 0.01 1`
+for i in `seq 0 0.01 1`
     do
         # let alpha=${i}/100
         echo "alpha=${i}" >> alpha-outputs.txt
