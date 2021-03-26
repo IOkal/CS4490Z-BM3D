@@ -1568,7 +1568,7 @@ void precompute_HOG_BM(
             for (unsigned p=0; p<kHW; p++){
                 for(unsigned q=0; q<kHW; q++){
                     int x = k_r + p + q*width; //Current pixel (k_r which is top left) plus p (col index) + q*width to get the row
-                    patch_histogram[k_r][floor(magnitudes[x]/32)]++;
+                    patch_histogram[k_r][floor(magnitudes[x]/16)]++;
                 }
             }
         }
@@ -1714,7 +1714,7 @@ void precompute_HOG_BM(
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<32; k++){
+                    for(int k=0; k<16; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
@@ -1729,7 +1729,7 @@ void precompute_HOG_BM(
 
                 for (int di = - (int) nHW; di < 0; di++){
                     n_r = k_r + (-dj) + nHW + (-di) * Ns;
-                    for(int k=0; k<32; k++){
+                    for(int k=0; k<16; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
