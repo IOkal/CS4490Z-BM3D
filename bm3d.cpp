@@ -1651,11 +1651,20 @@ void precompute_HOG_BM(
     float maxDistance = -1;
     float maxDiff = -1;
 
+    // TODO: Change algorithm to take histogram of intensity.
+    // 100 230 111 233 10 100 100 10 60 100
+    // 255/9 
+    // 0-16 17-32 ...
+    // Experiment 1:
+    // When patches are 16 values
+    // Exp 2:
+    // 32 values (with 8 bins)
+    // Take OG BM3D application and apply ...
+
     // Looping
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
         int diff = 0;
-
         for (unsigned ind_j = 0; ind_j < column_ind.size(); ind_j++)
         {
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
