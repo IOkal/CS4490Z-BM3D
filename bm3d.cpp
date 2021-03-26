@@ -1549,8 +1549,8 @@ void precompute_HOG_BM(
     vector<unsigned> column_ind;
     ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
 
-    // 2D Vector with 9 bins each representing a range of angles 20 degrees wide
-    vector<vector<int> > patch_histogram(height*width, vector<int> (9,0));
+    // 2D Vector with 16 bins each representing a range of intensity values 16 wide.
+    vector<vector<int> > patch_histogram(height*width, vector<int> (32,0));
 
      //! Precompute Bloc Matching
     vector<pair<int, unsigned> > table_distance;
@@ -1568,7 +1568,7 @@ void precompute_HOG_BM(
             for (unsigned p=0; p<kHW; p++){
                 for(unsigned q=0; q<kHW; q++){
                     int x = k_r + p + q*width; //Current pixel (k_r which is top left) plus p (col index) + q*width to get the row
-                    patch_histogram[k_r][floor(angles[x]/20)]++;
+                    patch_histogram[k_r][floor(magnitudes[x]/32)]++;
                 }
             }
         }
@@ -1675,7 +1675,7 @@ void precompute_HOG_BM(
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<9; k++){
+                    for(int k=0; k<32; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
@@ -1714,7 +1714,7 @@ void precompute_HOG_BM(
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<9; k++){
+                    for(int k=0; k<32; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
@@ -1729,7 +1729,7 @@ void precompute_HOG_BM(
 
                 for (int di = - (int) nHW; di < 0; di++){
                     n_r = k_r + (-dj) + nHW + (-di) * Ns;
-                    for(int k=0; k<9; k++){
+                    for(int k=0; k<32; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
