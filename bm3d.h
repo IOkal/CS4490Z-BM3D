@@ -21,6 +21,7 @@ int run_bm3d(
 ,   const unsigned tau_2D_hard
 ,   const unsigned tau_2D_wien
 ,   const unsigned color_space
+,   float alpha
 );
 
 //! 1st step of BM3D
@@ -41,6 +42,7 @@ void bm3d_1st_step(
 ,   fftwf_plan *  plan_2d_for_1
 ,   fftwf_plan *  plan_2d_for_2
 ,   fftwf_plan *  plan_2d_inv
+,   float alpha
 );
 
 //! 2nd step of BM3D
@@ -62,6 +64,7 @@ void bm3d_2nd_step(
 ,   fftwf_plan *  plan_2d_for_1
 ,   fftwf_plan *  plan_2d_for_2
 ,   fftwf_plan *  plan_2d_inv
+,   float alpha
 );
 
 //! Process 2D dct of a group of patches
@@ -196,6 +199,7 @@ void precompute_HOG_BM(
 ,   const unsigned n
 ,   const unsigned pHW
 ,   const float    tauMatch
+,   float alpha
 );
 
 void printHistogram(

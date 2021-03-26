@@ -32,11 +32,11 @@ using namespace std;
 int main(int argc, char **argv)
 {
     //! Check if there is the right call for the algorithm
-	if (argc < 14)
+	if (argc < 15)
 	{
 		cout << "usage: BM3D image sigma noisy basic denoised difference bias \
                  difference_bias computeBias tau_2d_hard useSD_hard \
-                 tau_2d_wien useSD_wien color_space" << endl;
+                 tau_2d_wien useSD_wien color_space alpha" << endl;
 		return EXIT_FAILURE;
 	}
 
@@ -45,6 +45,7 @@ int main(int argc, char **argv)
 	vector<float> img_basic_bias;
 	vector<float> img_diff_bias;
     unsigned width, height, chnls;
+    float alpha = atof(argv[15]);
 
     //! Load image
 	if(load_image(argv[1], img, &width, &height, &chnls) != EXIT_SUCCESS)
@@ -108,7 +109,7 @@ int main(int argc, char **argv)
 
     //! Denoising
     if (run_bm3d(fSigma, img_noisy, img_basic, img_denoised, width, height, chnls,
-                 useSD_1, useSD_2, tau_2D_hard, tau_2D_wien, color_space)
+                 useSD_1, useSD_2, tau_2D_hard, tau_2D_wien, color_space, alpha)
         != EXIT_SUCCESS)
         return EXIT_FAILURE;
 
@@ -130,7 +131,7 @@ int main(int argc, char **argv)
     if (compute_bias)
     {
         if (run_bm3d(fSigma, img, img_basic_bias, img_bias, width, height, chnls,
-                     useSD_1, useSD_2, tau_2D_hard, tau_2D_wien, color_space)
+                     useSD_1, useSD_2, tau_2D_hard, tau_2D_wien, color_space, alpha)
             != EXIT_SUCCESS)
             return EXIT_FAILURE;
 
