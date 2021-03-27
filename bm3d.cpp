@@ -1550,15 +1550,18 @@ void precompute_HOG_BM(
     ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
 
     // 2D Vector with 16 bins each representing a range of intensity values 16 wide.
-    vector<vector<int> > patch_histogram(height*width, vector<int> (256,0));
+    // vector<vector<int> > patch_histogram(height*width, vector<int> (256,0));
 
     // Vector to keep track of averages of each patch within search range
-    vector<int> patch_averages(height*width);
+    vector<float> patch_averages(height*width);
 
      //! Precompute Bloc Matching
     vector<pair<int, unsigned> > table_distance;
     //! To avoid reallocation
     // table_distance.reserve(Ns * Ns);
+
+    float maxAvg = -1;
+    float minAvg = 1000;
 
     // Looping through the patches and creating histogram for each patch
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
@@ -1567,13 +1570,20 @@ void precompute_HOG_BM(
         {
             //! Initialization
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
+            float total_patch_value = 0;
             // Looping through all patches and storing data in histogram
             for (unsigned p=0; p<kHW; p++){
                 for(unsigned q=0; q<kHW; q++){
                     int x = k_r + p + q*width; //Current pixel (k_r which is top left) plus p (col index) + q*width to get the row
-                    patch_histogram[k_r][floor(magnitudes[x]/16)]++;
+                    // patch_histogram[k_r][floor(magnitudes[x]/16)]++;
+                    total_patch_value += magnitudes[x];
                 }
             }
+            patch_averages[k_r] = total_patch_value;
+            if(total_patch_value > maxAvg)
+                maxAvg = total_patch_value;
+            if(total_patch_value < minAvg)
+                minAvg = total_patch_value;
         }
     }
 
@@ -1652,7 +1662,7 @@ void precompute_HOG_BM(
 
     // Pass through to find maxDistance and maxDiff
     float maxDistance = -1;
-    float maxDiff = -1;
+    // float maxDiff = -1;
 
     // Looping
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
@@ -1670,27 +1680,27 @@ void precompute_HOG_BM(
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
                     // for(int p=0; p<kHW; p++){
-                    //     for(int q=0; q<kHW; q++){
+                    //     for(int q=0; q<kHW; q++){(float)(kHW*kHW)
 
                     //     }
                     // }
-                    for(int k=0; k<256; k++){
-                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                        diff += (x*x);
-                    }
+                    // for(int k=0; k<256; k++){
+                    //     x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
+                    //     diff += (x*x);
+                    // }
                     distance = sum_table[dj + nHW + di * Ns][k_r];
                     if (distance > maxDistance)
                         maxDistance = distance;
-                    if (diff > maxDiff)
-                        maxDiff = diff;
-                    diff = 0;
+                    // if (diff > maxDiff)
+                    //     maxDiff = diff;
+                    // diff = 0;
                 }
             }
         }
     }
 
     // TODO: For each patch, take the average of all pixel values (64 pixels) then use that in the alpha threshold. 
-    // Calculate the difference between patche averages
+    // Calculate the difference between patch averages
     // THEN multiple average error with # pixels in this case it will be always 64. Or 12x12 (144) (when sigma > 40) -- Use hHard or kHW
 
     // Looping through patches again and determining patch histogram value and patch distance.
@@ -1713,13 +1723,11 @@ void precompute_HOG_BM(
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<256; k++){
-                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                        diff += (x*x);
-                    }
                     distance = sum_table[dj + nHW + di * Ns][k_r];
-                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/maxDiff))*10000;
-
+                    diff = abs(patch_averages[k_r]-patch_averages[n_r]);
+                    
+                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/(maxAvg-minAvg)))*10000;
+                    // thresh = alpha*(distance/maxDistance)*10000;
                     // thresh = alpha*distance + (1-alpha)*diff;
 
                     table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
@@ -1728,13 +1736,13 @@ void precompute_HOG_BM(
 
                 for (int di = - (int) nHW; di < 0; di++){
                     n_r = k_r + (-dj) + nHW + (-di) * Ns;
-                    for(int k=0; k<16; k++){
-                        x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
-                        diff += (x*x);
-                    }
                     // distance = pow(n_r-k_r, 2);
                     distance = sum_table[-dj + nHW + (-di) * Ns][k_r + di * width + dj];
-                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/maxDiff))*10000;
+                    diff = abs(patch_averages[k_r]-patch_averages[n_r]);
+                    
+                    thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/(maxAvg-minAvg)))*10000;
+                    // thresh = (alpha*(distance/maxDistance) + (1-alpha)*(diff/maxDiff))*10000;
+                    // thresh = alpha*(distance/maxDistance)*10000;
 
                     // thresh = alpha*distance + (1-alpha)*diff;
                     table_distance.push_back(make_pair(thresh, k_r + di * width + dj));
