@@ -1550,7 +1550,10 @@ void precompute_HOG_BM(
     ind_initialize(column_ind, width - kHW + 1, nHW, pHW);
 
     // 2D Vector with 16 bins each representing a range of intensity values 16 wide.
-    vector<vector<int> > patch_histogram(height*width, vector<int> (32,0));
+    vector<vector<int> > patch_histogram(height*width, vector<int> (256,0));
+
+    // Vector to keep track of averages of each patch within search range
+    vector<int> patch_averages(height*width);
 
      //! Precompute Bloc Matching
     vector<pair<int, unsigned> > table_distance;
@@ -1651,16 +1654,6 @@ void precompute_HOG_BM(
     float maxDistance = -1;
     float maxDiff = -1;
 
-    // TODO: Change algorithm to take histogram of intensity.
-    // 100 230 111 233 10 100 100 10 60 100
-    // 255/9 
-    // 0-16 17-32 ...
-    // Experiment 1:
-    // When patches are 16 values
-    // Exp 2:
-    // 32 values (with 8 bins)
-    // Take OG BM3D application and apply ...
-
     // Looping
     for (unsigned ind_i = 0; ind_i < row_ind.size(); ind_i++)
     {
@@ -1669,13 +1662,19 @@ void precompute_HOG_BM(
         {
             const unsigned k_r = row_ind[ind_i] * width + column_ind[ind_j];
             unsigned n_r = 0;
+            int total_pixel_value = 0;
 
             // nHW = search window = 16. Full search = 32 in each direction            
             for (int dj = -(int) nHW; dj <= (int) nHW; dj++)
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<32; k++){
+                    // for(int p=0; p<kHW; p++){
+                    //     for(int q=0; q<kHW; q++){
+
+                    //     }
+                    // }
+                    for(int k=0; k<256; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
@@ -1690,9 +1689,9 @@ void precompute_HOG_BM(
         }
     }
 
-    // TODO: Create a graph of all the PSNR values at each sigma level (30, 40, ... , 100) with all the different alpha values
-    // to make sure that there is in fact a "peak" and not random alpha values.
-    // x- sigma, y-alpha, z-psnr
+    // TODO: For each patch, take the average of all pixel values (64 pixels) then use that in the alpha threshold. 
+    // Calculate the difference between patche averages
+    // THEN multiple average error with # pixels in this case it will be always 64. Or 12x12 (144) (when sigma > 40) -- Use hHard or kHW
 
     // Looping through patches again and determining patch histogram value and patch distance.
     // Then using alpha as the ratio of which block matching method to prioritize.
@@ -1714,7 +1713,7 @@ void precompute_HOG_BM(
             {
                 for (int di = 0; di <= (int) nHW; di++){
                     n_r = k_r + di * width + dj; // dj + nHW + di * Ns;
-                    for(int k=0; k<16; k++){
+                    for(int k=0; k<256; k++){
                         x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                         diff += (x*x);
                     }
