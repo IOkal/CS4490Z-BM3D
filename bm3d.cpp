@@ -1683,7 +1683,7 @@ void precompute_HOG_BM(
                     //     for(int q=0; q<kHW; q++){(float)(kHW*kHW)
 
                     //     }
-                    // }
+                    // }nHW
                     // for(int k=0; k<256; k++){
                     //     x = (patch_histogram[k_r][k]-patch_histogram[n_r][k]);
                     //     diff += (x*x);
@@ -1698,6 +1698,13 @@ void precompute_HOG_BM(
             }
         }
     }
+
+    FILE *fptr = fopen("outputs-bm3d.csv", "w");
+    if (fptr == NULL)
+    {
+        printf("Could not open file");
+    }
+
 
     // TODO: For each patch, take the average of all pixel values (64 pixels) then use that in the alpha threshold. 
     // Calculate the difference between patch averages
@@ -1759,8 +1766,13 @@ void precompute_HOG_BM(
             partial_sort(table_distance.begin(), table_distance.begin() + nSx_r,
                                             table_distance.end(), ComparaisonFirst);
             //! Keep a maximum of similar patches
-            for (unsigned n = 0; n < nSx_r; n++)
+            for (unsigned n = 0; n < nSx_r; n++){
                 patch_table[k_r].push_back(table_distance[n].second);
+                if(k_r <= 61590 && k_r >= 61300){
+                    cout << "k_r = " << k_r << "\n" << table_distance[n].second << endl;
+                }
+                fprintf(fptr,"%u, %u\n", n, table_distance[n].second);  
+            }
         }
     }
 }
