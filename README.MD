@@ -10,13 +10,19 @@
 This source code provides an of the BM3D image denoising.
 
 ## Abstract
-**Context and Motivation:** Millions of images are captured daily, continually increasing the demand for higher quality images. Based on the capture device, images may be distorted by additive noise, and an image denoising algorithm handles the task of getting more information out of the image.
-**Question/problem/Objectives:** Image denoising is done by removing high-frequency noise. Incidentally, this also removes anything in the high-frequency range, creating artifacts as a result. My objective is to distinguish the noise from the information, having the slightest impact on image quality when denoising.
-**Principal ideas:** Most image denoising methods work optimally; however, I tweak the algorithms on various images to improve each algorithm in my research. I use additive patch-based algorithms to denoise the images.
-**Research approach (or methodology):** I plan to create a tool to analyze image denoising techniques by extracting features from similar patches, where patches are n×n pixels.
-**Anticipated contribution (or results):** There is a lack of research into image comparison tools and my research brings forward a different way of looking at image denoising. 
-**Anticipated impact of results:** The results will analyze different modifications to the BM3D algorithm to see any possible improvements in image quality.
-**Limitations:** I limit my research to only additive noise; otherwise, the scope would be too big.
+**Context and Motivation:** Millions of images are captured daily, continually increasing the demand for higher quality images. Based on the capture device, images may be distorted by additive noise, and an image denoising algorithm handles the task of getting more information out of the image.  
+
+**Question/problem/Objectives:** Image denoising is done by removing high-frequency noise. Incidentally, this also removes anything in the high-frequency range, creating artifacts as a result. My objective is to distinguish the noise from the information, having the slightest impact on image quality when denoising.  
+
+**Principal ideas:** Most image denoising methods work optimally; however, I tweak the algorithms on various images to improve each algorithm in my research. I use additive patch-based algorithms to denoise the images.  
+
+**Research approach (or methodology):** I plan to create a tool to analyze image denoising techniques by extracting features from similar patches, where patches are n×n pixels.  
+
+**Anticipated contribution (or results):** There is a lack of research into image comparison tools and my research brings forward a different way of looking at image denoising.  
+
+**Anticipated impact of results:** The results will analyze different modifications to the BM3D algorithm to see any possible improvements in image quality.  
+
+**Limitations:** I limit my research to only additive noise; otherwise, the scope would be too big.  
 
 
 ## UNIX/LINUX/MAC USER GUIDE
@@ -27,8 +33,7 @@ The code is only compilable on Unix/Linux and Mac OS.
 Automated compilation through `make` (NOTE: see the prerequisite section to ensure successful compilation).
 
 ## Prerequisites: 
-1. libpng library [guide](https://geeksww.com/tutorials/libraries/libpng/installation/installing_libpng_on_ubuntu_linux.php)
-]
+1. libpng library [guide](https://geeksww.com/tutorials/libraries/libpng/installation/installing_libpng_on_ubuntu_linux.php).
 2. [fftw library](http://www.fftw.org/download.html).
 3. (Optional) [OpenMP](https://www.openmp.org/) (This will accelerate runtime)
 
@@ -37,10 +42,9 @@ Only the PNG format is supported.
 
 ## Common Errors:
 1. `/usr/bin/ld: cannot find -lfftw3f` \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`collect2: error: ld returned 1 exit status` \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \ 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; To fix the error: (according to https://ubuntuforums.org/showthread.php?t=1274884) type the command: \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install fftw3-dev` \
+`collect2: error: ld returned 1 exit status` \
+To fix the error: (according to https://ubuntuforums.org/showthread.php?t=1274884) type the command: \
+`sudo apt-get install fftw3-dev` \
  
 2. `io_png.c:69:10: fatal error: png.h: No such file or directory` \
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Solution, according to https://stackoverflow.com/questions/36674667/png-h-file-not-found-linux: \
