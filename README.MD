@@ -7,7 +7,7 @@
 
 ## OVERVIEW
 
-This source code provides an of the BM3D image denoising.
+This source code provides a BM3D Denoising algorithm that has been tweaked to .
 
 ## Abstract
 **Context and Motivation:** Millions of images are captured daily, continually increasing the demand for higher quality images. Based on the capture device, images may be distorted by additive noise, and an image denoising algorithm handles the task of getting more information out of the image.  
@@ -44,14 +44,38 @@ Only the PNG format is supported.
 1. `/usr/bin/ld: cannot find -lfftw3f` \
 `collect2: error: ld returned 1 exit status` \
 To fix the error: (according to https://ubuntuforums.org/showthread.php?t=1274884) type the command: \
-`sudo apt-get install fftw3-dev` \
+`sudo apt-get install fftw3-dev` 
  
 2. `io_png.c:69:10: fatal error: png.h: No such file or directory` \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Solution, according to https://stackoverflow.com/questions/36674667/png-h-file-not-found-linux: \
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install libpng-dev` \
+Solution, according to https://stackoverflow.com/questions/36674667/png-h-file-not-found-linux: \
+`sudo apt-get install libpng-dev` 
 
+## Installation:
+
+### A. Libpng:
+
+Adapted from: https://geeksww.com/tutorials/libraries/libpng/installation/installing_libpng_on_ubuntu_linux.php
+```
+sudo apt-get install zlib1g-dev
+wget https://downloads.sourceforge.net/libpng/libpng-1.5.4.tar.gz
+tar xzf libpng-1.5.4.tar.gz
+cd libpng-1.5.4
+./configure --prefix=/usr/local/libpng
+make
+sudo make install
+```
+
+### B. FFTW3:
+1. Download the zip folder from `http://www.fftw.org/download.html`
+2. unzip the folder in the directory `usr/local/lib/` or `usr/lib/`
+3. go the the folder directory and type `./configure`
+4. type the command `make install`
+
+### C. OpenMP
+
+1. Run `sudo apt-get install libomp-dev` 
 -------------------------------------------------------------------------
-Usage:
+## Usage:
 1. Clone this repository. Enter the directory with `cd CS4490Z-BM3D`. 
 
 2. Compile the source code (on Unix/Linux/Mac OS). 
