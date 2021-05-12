@@ -27,24 +27,24 @@ The code is only compilable on Unix/Linux and Mac OS.
 Automated compilation through `make` (NOTE: see the prerequisite section to ensure successful compilation).
 
 ## Prerequisites: 
-1. libpng library (guide)[https://geeksww.com/tutorials/libraries/libpng/installation/installing_libpng_on_ubuntu_linux.php
+1. libpng library [guide](https://geeksww.com/tutorials/libraries/libpng/installation/installing_libpng_on_ubuntu_linux.php)
 ]
-2. (fftw library)[http://www.fftw.org/download.html].
-3. (Optional) OpenMP (This will accelerate runtime)
+2. [fftw library](http://www.fftw.org/download.html).
+3. (Optional) [OpenMP](https://www.openmp.org/) (This will accelerate runtime)
 
 ## Image format:
 Only the PNG format is supported. 
 
 ## Common Errors:
-1. `/usr/bin/ld: cannot find -lfftw3f`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`collect2: error: ld returned 1 exit status`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; To fix the error: (according to https://ubuntuforums.org/showthread.php?t=1274884) type the command:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install fftw3-dev`
+1. `/usr/bin/ld: cannot find -lfftw3f` \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`collect2: error: ld returned 1 exit status` \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \ 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; To fix the error: (according to https://ubuntuforums.org/showthread.php?t=1274884) type the command: \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install fftw3-dev` \
  
-2. `io_png.c:69:10: fatal error: png.h: No such file or directory`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Solution, according to https://stackoverflow.com/questions/36674667/png-h-file-not-found-linux:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install libpng-dev`
+2. `io_png.c:69:10: fatal error: png.h: No such file or directory` \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Solution, according to https://stackoverflow.com/questions/36674667/png-h-file-not-found-linux: \
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; `sudo apt-get install libpng-dev` \
 
 -------------------------------------------------------------------------
 Usage:
